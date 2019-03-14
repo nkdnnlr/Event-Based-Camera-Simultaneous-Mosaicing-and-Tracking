@@ -1,6 +1,6 @@
 import numpy as np
 
-def frankotchellappa(dzdx,dzdy):
+def frankotchellappa(dzdx, dzdy):
     """
     % Frankt-Chellappa Algrotihm
     % Input gx and gy
@@ -28,25 +28,28 @@ def frankotchellappa(dzdx,dzdy):
 
     rows, cols = np.array(dzdx).shape
 
-    wx, wy = np.meshgrid(-np.pi/2:np.pi/(cols-1):np.pi/2,-np.pi/2:np.pi/(rows-1):np.pi/2)
+    wx, wy = np.meshgrid(np.arange(-np.pi / 2, np.pi / 2, np.pi / (cols )),
+                         np.arange(-np.pi / 2, np.pi / 2, np.pi / (rows )))
 
-    % Quadrant shift to put zero frequency at the appropriate edge
-    wx = ifftshift(wx); wy = ifftshift(wy);
+    # Quadrant shift to put zero frequency at the appropriate edge
+    wx = np.fft.ifftshift(wx)
+    wy = np.fft.ifftshift(wy)
 
-    DZDX = fft2(dzdx);   % Fourier transforms of gradients
-    DZDY = fft2(dzdy);
+    DZDX = np.fft.fft2(dzdx)   # Fourier transforms of gradients
+    DZDY = np.fft.fft2(dzdy)
 
-    % Integrate in the frequency domain by phase shifting by pi/2 and
-    % weighting the Fourier coefficients by their frequencies in x and y and
-    % then dividing by the squared frequency.  eps is added to the
-    % denominator to avoid division by 0.
-    j = sqrt(-1);
+    # Integrate in the frequency domain by phase shifting by pi/2 and
+    #  weighting the Fourier coefficients by their frequencies in x and y and
+    #  then dividing by the squared frequency.  eps is added to the
+    #  denominator to avoid division by 0.
+    eps = np.finfo(float).eps
+    j = 1j
 
-    % dd = wx.^2 + wy.^2;
-    Z = (-j*wx.*DZDX -j*wy.*DZDY)./(wx.^2 + wy.^2 + eps);
+    # % dd = wx.^2 + wy.^2;
+    Z = (-j * wx * DZDX, -j * wy * DZDY) / (wx**2 + wy**2 + eps)
 
+    z = np.real(np.fft.ifft2(Z))  # Reconstruction
+    z = z - np.min(z)
+    z = z/2
 
-    z = real(ifft2(Z));  % Reconstruction
-    z = z - min(z(:));
-    z = z/2;
     return z
