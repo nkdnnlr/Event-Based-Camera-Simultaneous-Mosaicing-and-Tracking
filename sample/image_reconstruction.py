@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import sample.integration_methods as integration_methods
+
 
 ## ___Dataset___
 
