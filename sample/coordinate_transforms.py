@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def R2AA(R):
+def r2aa(R):
     """
     Convert Rotation Matrix (R) to Axis Angle (AA)
      Written by Garrick Orchard July 2017
@@ -30,7 +30,7 @@ def R2AA(R):
         ax = U[:, 0].transpose()
 
         # Adjust the sign of the axis
-        if np.linalg.norm(AA2R([ax, theta]) - R, 'fro') > np.linalg.norm(AA2R([-ax, theta]) - R, 'fro'):
+        if np.linalg.norm(aa2r([ax, theta]) - R, 'fro') > np.linalg.norm(aa2r([-ax, theta]) - R, 'fro'):
             ax = - ax
 
     else:
@@ -50,7 +50,7 @@ def R2AA(R):
     return AA
 
 
-def AA2R(AA):
+def aa2r(AA):
     """
     Convert Axis Angle (AA) to Rotation Matrix (R)
      Written by Garrick Orchard July 2017
@@ -80,3 +80,46 @@ def AA2R(AA):
     # Rotation matrix, using Rodrigues formula
     R = np.identity(3) + omega * np.sin(theta) + omega * omega * (1 - np.cos(theta))
     return R
+
+
+def q2R(q):
+    """
+    Converts quaternion(q) to 3x3 rotation matrix (R)
+    MATLAB Code written by Garrick Orchard July 2017, based on
+    http: // www.euclideanspace.com / maths / geometry / rotations / conversions / quaternionToMatrix /
+    :param q: [qw, qx, qy, qz] * [1 i j k]
+    :return: R
+    """
+    R = np.zeros((3, 3))
+    R[0, 0] = 1. - 2. * (q[2]**2. + q[3]**2.)
+    R[0, 1] = 2. * (q[1] * q[2] - q[3] * q[0])
+    R[0, 2] = 2. * (q[1] * q[3] + q[2] * q[0])
+
+    R[1, 0] = 2. * (q[1] * q[2] + q[3] * q[0])
+    R[1, 1] = 1. - 2. * (q[1]**2. + q[3]**2.)
+    R[1, 2] = 2. * (q[2] * q[3] - q[1] * q[0])
+
+    R[2, 0] = 2. * (q[1] * q[3] - q[2] * q[0])
+    R[2, 1] = 2. * (q[2] * q[3] + q[1] * q[0])
+    R[2, 2] = 1. - 2. * (q[1]**2. + q[2]**2.)
+
+    print("q: ", q)
+    print("R: \n", R)
+    print("R: \n", R[1,0])
+
+
+    # Numerically improve result by projecting on the space of rotation matrices
+    # print(np.linalg.svd(R))
+
+    u, s, v_T = np.linalg.svd(R, full_matrices=True)
+    v = v_T.T
+    R = u.dot(np.diag(np.array([1., 1., np.linalg.det(u.dot(v_T))]))).dot(v_T)
+    return R
+
+# # Testing
+# qw = 0.70746
+# qx = -0.706753
+# qy = 0.000354
+# qz = 0.000353
+#
+# print(q2R([qw, qx, qy, qz]))
