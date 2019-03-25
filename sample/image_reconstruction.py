@@ -13,6 +13,8 @@
 #  University of Zurich
 
 import os
+import time
+import math
 
 from scipy import io
 import numpy as np
@@ -100,4 +102,75 @@ poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
 print("Head: \n", poses.head(10))
 print("Tail: \n", poses.tail(10))
 
-# Convert quaternions to rotation matrices
+# Convert quaternions to rotation matrices and save in a dictionary TODO: UGLY AS HELL!!
+rotmats_dict = coordinate_transforms.q2R_dict(poses)
+# print(rotmats_dict)
+# print("Head: \n", poses.head(10))
+# print("Tail: \n", poses.tail(10))
+
+# rotmats_ctrl = np.zeros((num_poses, 3, 3))
+# for k in len(num_poses):
+#     rotmats_ctrl[k,:,:] =
+
+## Image reconstruction using pixel-wise EKF
+# Input: events, contrast threshold and camera orientation (discrete poses + interpolation)
+# Output: reconstructed intensity image
+# profile('on','-detail','builtin','-timer','performance')
+starttime = time.time()
+
+num_events_batch = 300
+num_events_display = 100000
+num_batches_display = math.floor(num_events_display / num_events_batch);
+
+# Variables related to the reconstructed image mosaic. EKF initialization
+# Gradient map
+grad_map = {}
+grad_map['x'] = np.zeros((output_height, output_width))
+grad_map['y'] = np.zeros((output_height, output_width))
+# % Covariance matrix of each gradient pixel
+grad_initial_variance = 10
+grad_map_covar = {}
+grad_map_covar['xx'] =  np.ones((output_height, output_width)) * grad_initial_variance
+grad_map_covar['xy'] = np.zeros((output_height, output_width))
+grad_map_covar['yx'] = np.zeros((output_height, output_width))
+grad_map_covar['yy'] =  np.ones((output_height, output_width)) * grad_initial_variance
+
+# % For efficiency, a structure, called event map, contains for every pixel
+# % the time of the last event and its rotation at that time.
+s = {}
+s['sae'] = -1e-6
+s['rotation'] = np.zeros((3,3))
+np.fill_diagonal(s['rotation'], np.NaN)
+event_map = np.matlib.repmat(s, dvs_parameters['sensor_height'], dvs_parameters['sensor_width'])
+
+
+rotmats_1stkey = list(rotmats_dict.keys())[0]
+rot0 = rotmats_dict[rotmats_1stkey]  # to center the map around the first pose
+one_vec = np.ones((num_events_batch, 1)) # ??
+Id = np.eye(2) # ??
+
+## Processing events
+print("Processing events")
+plt.figure()
+fig_show_evol = plt.figure(facecolor='w')
+#units = normalized should be true
+first_plot = True # for efficient plotting
+
+iEv = 0 # event counter
+iBatch = 1 # packet-of-events counter
+
+while True:
+    if (iEv + num_events_batch > num_events):
+        break #% There are no more events
+
+    # #% Get batch of events
+    # events_batch = events(iEv + np.range(num_events_batch), :)
+    # iEv = iEv + num_events_batch;
+    #
+    # t_events_batch = events_batch(:, 1);
+    # x_events_batch = events_batch(:, 2);
+    # y_events_batch = events_batch(:, 3);
+    # pol_events_batch = 2 * (events_batch(:, 4) - 0.5);
+    break
+
+

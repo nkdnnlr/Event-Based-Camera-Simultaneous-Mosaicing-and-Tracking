@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 
 def r2aa(R):
@@ -103,9 +104,9 @@ def q2R(q):
     R[2, 1] = 2. * (q[2] * q[3] + q[1] * q[0])
     R[2, 2] = 1. - 2. * (q[1]**2. + q[2]**2.)
 
-    print("q: ", q)
-    print("R: \n", R)
-    print("R: \n", R[1,0])
+    # print("q: ", q)
+    # print("R: \n", R)
+    # print("R: \n", R[1,0])
 
 
     # Numerically improve result by projecting on the space of rotation matrices
@@ -116,10 +117,36 @@ def q2R(q):
     R = u.dot(np.diag(np.array([1., 1., np.linalg.det(u.dot(v_T))]))).dot(v_T)
     return R
 
-# # Testing
+def q2R_dict(df):
+    """
+
+    :param df:
+    :return:
+    """
+    # df['rotmats_ctrl'] = np.zeros((3,3))
+    rotmats = {}
+    for idx, row in df.copy().iterrows():
+        rotmats[df.loc[idx, 't']] = q2R((df.loc[idx, 'qw'], df.loc[idx, 'qx'],
+                                          df.loc[idx, 'qy'], df.loc[idx, 'qz']))
+    return rotmats
+
+
+
+
+# # Testing... TODO: Write proper test functions
 # qw = 0.70746
 # qx = -0.706753
 # qy = 0.000354
 # qz = 0.000353
 #
 # print(q2R([qw, qx, qy, qz]))
+
+# should give something as (from matlab code with same quaternions)
+# 0.999999500150000 -0.000999848031280 0.000001914209993
+# -0.000000914216424 0.001000145059139 0.999999499854388
+# -0.000999849445698 -0.999999000006388 0.001000143645140
+# num_poses = 4
+# rotmats_ctrl = np.zeros((num_poses, 3, 3))
+# print(rotmats_ctrl)
+# for k in range(num_poses):
+#     rotmats_ctrl[k,:,:] = q2R([qw, qx, qy, qz])
