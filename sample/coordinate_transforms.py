@@ -117,9 +117,10 @@ def q2R(q):
     R = u.dot(np.diag(np.array([1., 1., np.linalg.det(u.dot(v_T))]))).dot(v_T)
     return R
 
+
 def q2R_dict(df):
     """
-
+    Transforms quaternions vector q to rotation matrix R
     :param df:
     :return:
     """
@@ -131,7 +132,47 @@ def q2R_dict(df):
     return rotmats
 
 
+def rotation_interpolation(t, rotmats_dict, t_query):
+    """
+    Function for linear interpolation of rotations.
+    Interpolate the orientation (rotation) at a given time.
+    :param t: timestamps of discrete set of orientations ("control poses")
+    :param rotmats: discrete set of rotation matrices
+    :param t_query: time of the requested rotation matrix
+    :return: interpolated rotation matrix
+    """
 
+    rotmats_1stkey = list(rotmats_dict.keys())[0]
+    rotmats_lastkey = list(rotmats_dict.keys())[-1]
+
+    # Rotation interpolation
+    if (t_query < t.iloc[0]  or t_query > t.iloc[-1]):
+        rot_interp = np.NaN * rotmats_dict[rotmats_1stkey]
+
+    elif t_query == t.iloc[-1]:
+        rot_interp = rotmats_dict[rotmats_lastkey]
+
+    else:
+        print(t_query)
+        # idx_0 = find(t_query >= t, 1, 'last');
+        # % Two
+        # rotations and their
+        # times
+        # t_0 = t(idx_0);
+        # t_1 = t(idx_0 + 1);
+        # rot_0 = rotmats(:,:, idx_0);
+        # rot_1 = rotmats(:,:, idx_0 + 1);
+        # % Interpolation
+        # parameter in [0, 1]
+        # dt = (t_query - t_0) / (t_1 - t_0);
+        # % Linear
+        # interpolation, Lie
+        # group
+        # formulation
+        # axang_increm = f_r2a(rot_0.
+        # '*rot_1 );
+        # axang_increm(4) = axang_increm(4) * dt;
+        # rot_interp = rot_0 * f_a2r(axang_increm);
 
 # # Testing... TODO: Write proper test functions
 # qw = 0.70746

@@ -76,6 +76,7 @@ f_a2r = coordinate_transforms.aa2r
 ## Loading Events
 print("Loading Events")
 filename_events = os.path.join(data_dir, 'events.txt')
+# Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
 events = pd.read_csv(filename_events, delimiter=' ', header=None, names=['sec', 'nsec', 'x', 'y', 'pol'])
 # print("Head: \n", events.head(10))
 num_events = events.size
@@ -90,6 +91,7 @@ print("Head: \n", events.head(10))
 print("Tail: \n", events.tail(10))
 
 
+
 ##Loading Camera poses
 print("Loading Camera Orientations")
 filename_events = os.path.join(data_dir, 'poses.txt')
@@ -97,7 +99,7 @@ poses = pd.read_csv(filename_events, delimiter=' ', header=None, names=['sec', '
 num_poses = poses.size
 print("Number of poses in file: ", num_poses)
 
-poses['t'] = poses['sec']-first_event_sec + 1e-9*(poses['nsec']-first_event_nsec)
+poses['t'] = poses['sec']-first_event_sec + 1e-9*(poses['nsec']-first_event_nsec) #time_ctrl in MATLAB
 poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
 print("Head: \n", poses.head(10))
 print("Tail: \n", poses.tail(10))
@@ -142,6 +144,7 @@ s['sae'] = -1e-6
 s['rotation'] = np.zeros((3,3))
 np.fill_diagonal(s['rotation'], np.NaN)
 event_map = np.matlib.repmat(s, dvs_parameters['sensor_height'], dvs_parameters['sensor_width'])
+print(event_map.shape)
 
 
 rotmats_1stkey = list(rotmats_dict.keys())[0]
@@ -163,14 +166,42 @@ while True:
     if (iEv + num_events_batch > num_events):
         break #% There are no more events
 
-    # #% Get batch of events
-    # events_batch = events(iEv + np.range(num_events_batch), :)
-    # iEv = iEv + num_events_batch;
-    #
-    # t_events_batch = events_batch(:, 1);
-    # x_events_batch = events_batch(:, 2);
-    # y_events_batch = events_batch(:, 3);
-    # pol_events_batch = 2 * (events_batch(:, 4) - 0.5);
-    break
+    print("Showing events")
+    #% Get batch of events
+    events_batch = events[iEv:num_events_batch]
+    iEv = iEv + num_events_batch
+    print(events_batch)
 
+    t_events_batch = events_batch['t']
+    x_events_batch = events_batch['x']
+    y_events_batch = events_batch['y']
+    pol_events_batch = 2 * (events_batch['pol'] - 0.5)
+
+    ## Get the two map points correspondig to each event and update the event map (time and rotation of last event)
+
+    # Get time of previous event at same DVS pixel
+    print(x_events_batch[0])
+    print(y_events_batch[0])
+    idx_to_mat = x_events_batch * dvs_parameters['sensor_height'] + y_events_batch
+
+    print(event_map[13, 125]['sae'])
+    t_prev_batch = np.array([event_map[x, y]['sae'] for x, y in zip(x_events_batch, y_events_batch)]).T
+    print("Hello")
+    print(t_prev_batch)
+
+    #Get (interpolated) rotation of current event
+    t_ev_mean = (t_events_batch.iloc[0] + t_events_batch.iloc[-1]) * 0.5
+    print("Hi", poses['t'].iloc[-1])
+    if t_ev_mean > poses['t'].iloc[-1]:
+        break # event later than last known pose
+
+
+
+    print(rotmats_dict)
+    Rot = coordinate_transforms.rotation_interpolation(
+        poses['t'], rotmats_dict, t_ev_mean)
+
+
+
+    exit()
 
