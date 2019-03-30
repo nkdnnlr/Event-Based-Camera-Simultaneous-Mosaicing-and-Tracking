@@ -14,7 +14,7 @@ def r2aa(R):
 
     # Check that input is a rotation matrix
     assert (R.shape == (3,3)) & (R.size == 9), "Input must be a 3x3 matrix"
-    assert np.linalg.norm(R.transpose @ R - np.identity(3), 'fro') < 1e-7, 'Input must be a 3D rotation matrix'
+    # assert np.linalg.norm(R.transpose @ R - np.identity(3), 'fro') < 1e-7, 'Input must be a 3D rotation matrix' TODO: removed warning!
     assert np.linalg.det(R) > 0, "Input must be a 3D rotation matrix"
 
     # Get rotation angle
@@ -46,13 +46,14 @@ def r2aa(R):
             ax = [0, 0, 1]  # This is what rotm2axang outputs
 
     # Output 4-vector: [axis, angle]
-    AA = ax.copy()
+    AA = list(ax.copy())
     AA.append(theta)
     return AA
 
 
 def aa2r(AA):
     """
+    Tested
     Convert Axis Angle (AA) to Rotation Matrix (R)
      Written by Garrick Orchard July 2017
      Based on:
@@ -60,8 +61,7 @@ def aa2r(AA):
     :param AA: 1x4 axis angle rotation.
     :return: R: a 3x3 rotation matrix
     """
-
-    assert AA.shape == 4, 'Input must be 1x4 or 4x1'  ##TODO: this might cause errors, check MATLAB
+    assert AA.shape == (4,), 'Input must be 1x4 or 4x1'  ##TODO: this might cause errors, check MATLAB
 
     # Axis
     norm_ax = np.linalg.norm(AA[0:3])
@@ -71,12 +71,12 @@ def aa2r(AA):
     ax = AA[0:3] / norm_ax  # Unit norm, avoid division by zero
 
     # Cross - product matrix
-    omega = [[0, -ax(2), ax(1),
-              ax(2), 0, -ax(0),
-              -ax(1), ax(0), 0]]
+    omega = np.array([[0, -ax[2], ax[1]],
+              [ax[2], 0, -ax[0]],
+              [-ax[1], ax[0], 0]])
 
     # Rotation angle
-    theta = AA(3)
+    theta = AA[3]
 
     # Rotation matrix, using Rodrigues formula
     R = np.identity(3) + omega * np.sin(theta) + omega * omega * (1 - np.cos(theta))
@@ -136,12 +136,12 @@ def rotation_interpolation(t, rotmats_dict, t_query):
     """
     Function for linear interpolation of rotations.
     Interpolate the orientation (rotation) at a given time.
+    TODO: Tested. Seems a bit inaccurate compared to MATLAB output.
     :param t: timestamps of discrete set of orientations ("control poses")
     :param rotmats: discrete set of rotation matrices
     :param t_query: time of the requested rotation matrix
     :return: interpolated rotation matrix
     """
-
     rotmats_1stkey = list(rotmats_dict.keys())[0]
     rotmats_lastkey = list(rotmats_dict.keys())[-1]
 
@@ -153,26 +153,27 @@ def rotation_interpolation(t, rotmats_dict, t_query):
         rot_interp = rotmats_dict[rotmats_lastkey]
 
     else:
-        print(t_query)
-        # idx_0 = find(t_query >= t, 1, 'last');
-        # % Two
-        # rotations and their
-        # times
-        # t_0 = t(idx_0);
-        # t_1 = t(idx_0 + 1);
-        # rot_0 = rotmats(:,:, idx_0);
-        # rot_1 = rotmats(:,:, idx_0 + 1);
-        # % Interpolation
-        # parameter in [0, 1]
-        # dt = (t_query - t_0) / (t_1 - t_0);
-        # % Linear
-        # interpolation, Lie
-        # group
-        # formulation
-        # axang_increm = f_r2a(rot_0.
-        # '*rot_1 );
-        # axang_increm(4) = axang_increm(4) * dt;
-        # rot_interp = rot_0 * f_a2r(axang_increm);
+        idx_0 = t.loc[t <= t_query].index.max() #Take maximal index where t <= t_query
+        print(idx_0)
+
+        # Two rotations and their times
+        t_0 = t[idx_0]
+        t_1 = t[idx_0 + 1]
+
+        rot_0 = rotmats_dict[t_0]
+        rot_1 = rotmats_dict[t_1]
+
+        print(rot_0)
+        print(rot_1)
+
+        # Interpolation parameter in [0, 1]
+        d_t = (t_query - t_0) / (t_1 - t_0)
+
+        # Linear interpolation, Lie group formulation
+        axang_increm =np.array(r2aa((rot_0.T).dot(rot_1)))  #TODO: is a little bit different than MATLABS, but only on the 4th digit
+        axang_increm[3] *= d_t
+        rot_interp = rot_0.dot(aa2r(np.array(axang_increm)))
+        return rot_interp
 
 # # Testing... TODO: Write proper test functions
 # qw = 0.70746

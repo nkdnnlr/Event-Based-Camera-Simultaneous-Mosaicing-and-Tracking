@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 #
 # dzdx = np.array([[1,2,3], [1,2,5], [4,5,6]])
 # M = np.matrix([[1,2,3], [1,2,5], [4,5,6]])
@@ -52,3 +53,10 @@ print(np.eye(3))
 d = np.zeros((3,3))
 a = np.fill_diagonal(d, np.NaN)
 print(d)
+
+df = pd.DataFrame(np.random.randn(10, 2), columns=list('ab'))
+print(df)
+print(df.loc[df['a'] > 1])
+print(df.loc[df['a'] > 1].index.max())
+
+

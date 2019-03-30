@@ -162,6 +162,7 @@ first_plot = True # for efficient plotting
 iEv = 0 # event counter
 iBatch = 1 # packet-of-events counter
 
+i=0
 while True:
     if (iEv + num_events_batch > num_events):
         break #% There are no more events
