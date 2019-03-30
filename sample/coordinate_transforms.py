@@ -175,6 +175,35 @@ def rotation_interpolation(t, rotmats_dict, t_query):
         rot_interp = rot_0.dot(aa2r(np.array(axang_increm)))
         return rot_interp
 
+
+def project_equirectangular_projection(point_3d, output_width, output_height):
+    """
+    Tested
+    Project a 3D point according to equirectangular model
+    Used for 360 degrees panoramic cameras that output a full panorama frame
+    :param point_3d: a 3D point
+    :param output_width: width of the panorama
+    :param output_height: height of the panorama
+    :return: point_2d: projected point (coordinates in the panorama image)
+    """
+    rho = np.sqrt(sum(np.square(point_3d), 1)) # norm of each 3D point
+    print(rho.shape)
+
+    fx = output_width / (2.0 * np.pi);
+    fy = output_height / np.pi
+    principal_point = 0.5 * np.array([output_width, output_height])
+
+    # np.arctan2
+    phi = np.arctan2(point_3d[0,:], point_3d[2,:])
+
+    theta = np.arcsin(-point_3d[2,:] / rho)
+    point_2d = np.array([phi * fx, -theta * fy])
+    point_2d[0, :] = point_2d[0, :] + principal_point[0]
+    point_2d[1, :] = point_2d[1, :] + principal_point[1]
+    return point_2d
+
+
+
 # # Testing... TODO: Write proper test functions
 # qw = 0.70746
 # qx = -0.706753

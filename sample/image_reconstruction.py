@@ -203,6 +203,17 @@ while True:
         poses['t'], rotmats_dict, t_ev_mean)
 
 
+    # print(np.concatenate((dvs_calibration['undist_pix_calibrated'][idx_to_mat, :], one_vec)))
+    bearing_vec = np.vstack((dvs_calibration['undist_pix_calibrated'][idx_to_mat, :].T[0],
+                             dvs_calibration['undist_pix_calibrated'][idx_to_mat, :].T[1],
+                             one_vec[:,0])) # 3xN
+    print(bearing_vec)
 
+    # Get map point corresponding to current event
+    print(rot0.shape)
+    print(Rot.shape)
+    rotated_vec = rot0.T.dot(Rot).dot(bearing_vec)
+    print(rotated_vec)
+    pm = coordinate_transforms.project_equirectangular_projection(rotated_vec, output_width, output_height)
     exit()
 
