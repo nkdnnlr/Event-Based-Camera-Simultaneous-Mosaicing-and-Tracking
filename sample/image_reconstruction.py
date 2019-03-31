@@ -197,7 +197,6 @@ while True:
         break # event later than last known pose
 
 
-
     print(rotmats_dict)
     Rot = coordinate_transforms.rotation_interpolation(
         poses['t'], rotmats_dict, t_ev_mean)
@@ -215,5 +214,29 @@ while True:
     rotated_vec = rot0.T.dot(Rot).dot(bearing_vec)
     print(rotated_vec)
     pm = coordinate_transforms.project_equirectangular_projection(rotated_vec, output_width, output_height)
+
+    #  Get map point corresponding to previous event at same pixel
+    rotated_vec_prev = np.zeros(rotated_vec.shape)
+    print(rotated_vec_prev.shape)
+    print(event_map.shape)
+    for ii in range(num_events_batch):
+        Rot_prev = event_map[x_events_batch[ii], y_events_batch[ii]]['rotation']
+        print(Rot_prev)  ##TODO: Something is wrong here! Check
+        rotated_vec_prev[:, ii] = rot0.T.dot(Rot_prev).dot(bearing_vec[:,ii])
+        #print(rotated_vec_prev[:, ii])
+        # exit()
+        # Update last rotation and time of event(SAE)
+        event_map[x_events_batch[ii], y_events_batch[ii]]['sae'] = t_events_batch[ii]
+        event_map[x_events_batch[ii], y_events_batch[ii]]['rotation'] = Rot
+    exit()
+    print(rotated_vec_prev)
+    pm_prev = coordinate_transforms.project_equirectangular_projection(rotated_vec_prev, output_width, output_height)
+    print("PM_PREV: ", pm_prev)
+
+    if (t_prev_batch[-1] < 0) or (t_prev_batch[-1] < poses['t'][0]):
+        continue # initialization phase. Fill in event_map
+
+
+
     exit()
 
