@@ -71,7 +71,6 @@ integration_method = 'frankotchellappa'
 # Provide function handles to convert from rotation matrix to axis-angle and vice-versa
 f_r2a = coordinate_transforms.r2aa
 f_a2r = coordinate_transforms.aa2r
-# TODO: What about q2R?
 
 ## Loading Events
 print("Loading Events")
@@ -229,10 +228,10 @@ while True:
     # print(event_map[109,109].rotation)
     # exit()
     # for ii in range(num_events_batch):
-    print("BEARING: ", bearing_vec)
-    print("Rot0: ", rot0)
-    print("ROTaTED VEC PREV: ")
-    print(rotated_vec_prev)
+    # print("BEARING: ", bearing_vec)
+    # print("Rot0: ", rot0)
+    # print("ROTaTED VEC PREV: ")
+    # print(rotated_vec_prev)
 
 
     # event_map = event_map.tolist() #make list to change single entries
@@ -250,23 +249,22 @@ while True:
         # print(event_map[x_events_batch[2]][y_events_batch[2]])
 
     pm_prev = coordinate_transforms.project_equirectangular_projection(rotated_vec_prev, output_width, output_height)
-    print("PM_PREV: ", pm_prev) ## Tested: Looks just as matlab output (still with discrepancies on ~5th digit)
-    print("ISNAN?")
+    # print("PM_PREV: ", pm_prev) ## Tested: Looks just as matlab output (still with discrepancies on ~5th digit)
+    # print("ISNAN?")
 
-    print(pm - pm_prev) ##TODO: ATTENTION, actually differs from MATLAB output...
-    exit()
+    # print(pm - pm_prev) ##ATTENTION, actually differs from MATLAB output. Only a number of 1e13, so shouldn't matter
     # print(sum(np.isnan(pm_prev[0,:]) | np.isnan(pm_prev[1,:])))
     # print(sum(np.isnan(pm_prev[1,:])))
     # exit()
 
     ##TODO: Include again in code in the end!!
-    # if (t_prev_batch[-1] < 0) or (t_prev_batch[-1] < poses['t'][0]):
-    #     continue # initialization phase. Fill in event_map
+    if (t_prev_batch[-1] < 0) or (t_prev_batch[-1] < poses['t'][0]):
+        continue # initialization phase. Fill in event_map
 
     #  Discard nan values
     mask_uninitialized = np.isnan(pm_prev[0,:]) | np.isnan(pm_prev[1,:])
     num_uninitialized = sum(mask_uninitialized)
-    print(num_uninitialized)
+    # print(num_uninitialized)
 
     # exit()
     if (num_uninitialized > 0):
@@ -288,16 +286,64 @@ while True:
             pm_prev.append(row[~mask_uninitialized].tolist())
         pm = np.array(pm)
         pm_prev = np.array(pm_prev)
-    print(len(pm[0]))
+    # print(len(pm[0]))
 
     # Get time since previous event at same pixel
     tc = t_events_batch - t_prev_batch
     event_rate = 1./(tc + 1e-12) #% measurement or observation(z)
 
     # Get velocity vector
-    print(pm - pm_prev)
-    vel = (pm - pm_prev) * event_rate
-    print(vel)
+    # print(pm - pm_prev)
+    vel = (pm - pm_prev) * event_rate  #TODO: Check for a point after the first to evaluate
+    # exit()
+
+    ## Extended Kalman Filter (EKF) for the intensity gradient map.
+    # Get gradient and covariance at current map points pm
+    ir = np.floor(pm[1,:]).astype(int) # row is y coordinate
+    ic = np.floor(pm[0,:]).astype(int) # col is x coordinate
+
+    gm = np.array([[grad_map['x'][i][j], grad_map['y'][i][j]] for i, j in zip(ir, ic)])
+    Pg = np.array([[grad_map_covar['xx'][i][j],
+           grad_map_covar['xy'][i][j],
+           grad_map_covar['yx'][i][j],
+           grad_map_covar['yy'][i][j]] for i, j in zip(ir, ic)])
+
+
+    # EKF update
+    if measurement_criterion == 'contrast':
+        # Use contrast as measurement function
+        # print("NOW")
+        # print(gm.shape)
+        dhdg = vel.T * np.array([tc * pol_events_batch, tc * pol_events_batch]).T # derivative of measurement function
+        nu_innovation = dvs_parameters['contrast_threshold'] - np.sum(dhdg * gm, axis=1)
+    else:
+        # Use the event rate as measurement function
+        dhdg = vel.T / np.array([dvs_parameters['contrast_threshold'] * pol_events_batch,
+                                 dvs_parameters['contrast_threshold'] * pol_events_batch]).T #deriv. of measurement function
+        nu_innovation = event_rate - np.sum(dhdg * gm, axis=1)
+
+    Pg_dhdg = np.array([Pg[:, 0]*dhdg[:, 0] + Pg[:, 1] * dhdg[:, 1],
+                        Pg[:, 2]*dhdg[:, 0] + Pg[:, 3] * dhdg[:, 1]]).T
+
+    S_covar_innovation = dhdg[:, 0] * Pg_dhdg[:, 0] + dhdg[:, 1] * Pg_dhdg[:, 1] + var_R
+    Kalman_gain = Pg_dhdg / np.array([S_covar_innovation, S_covar_innovation]).T
+    # Update gradient and covariance
+    gm = gm + Kalman_gain * np.array([nu_innovation, nu_innovation]).T
+    Pg = Pg - np.array([Pg_dhdg[:, 0] * Kalman_gain[:, 0], Pg_dhdg[:, 0] * Kalman_gain[:, 1],
+               Pg_dhdg[:, 1] * Kalman_gain[:, 0], Pg_dhdg[:, 1] * Kalman_gain[:, 1]]).T
+    # print(gm)
+    # print(Pg) #TODO: Test with points after the first one...
+
+    # Store updated values
+    gm = np.array([[grad_map['x'][i][j], grad_map['y'][i][j]] for i, j in zip(ir, ic)])
+
+    k = 0
+    for i, j in zip(ir, ic):
+        grad_map['x'][i][j] = gm[k, 0]
+        grad_map['y'][i][j] = gm[k, 1]
+        grad_map_covar['xx'][i][j] = Pg[k, 0]
+        grad_map_covar['xy'][i][j] = Pg[k, 1]
+        grad_map_covar['yx'][i][j] = Pg[k, 2]
+        grad_map_covar['yy'][i][j] = Pg[k, 3]
+        k += 1
     exit()
-
-
