@@ -154,7 +154,7 @@ def rotation_interpolation(t, rotmats_dict, t_query):
 
     else:
         idx_0 = t.loc[t <= t_query].index.max() #Take maximal index where t <= t_query
-        print(idx_0)
+        # print(idx_0)
 
         # Two rotations and their times
         t_0 = t[idx_0]
@@ -163,8 +163,8 @@ def rotation_interpolation(t, rotmats_dict, t_query):
         rot_0 = rotmats_dict[t_0]
         rot_1 = rotmats_dict[t_1]
 
-        print(rot_0)
-        print(rot_1)
+        # print(rot_0)
+        # print(rot_1)
 
         # Interpolation parameter in [0, 1]
         d_t = (t_query - t_0) / (t_1 - t_0)
@@ -187,7 +187,7 @@ def project_equirectangular_projection(point_3d, output_width, output_height):
     :return: point_2d: projected point (coordinates in the panorama image)
     """
     rho = np.sqrt(sum(np.square(point_3d))) # norm of each 3D point
-    print(rho.shape)
+    # print(rho.shape)
 
     fx = output_width / (2.0 * np.pi)
     fy = output_height / np.pi

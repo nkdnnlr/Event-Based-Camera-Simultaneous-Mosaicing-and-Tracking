@@ -131,16 +131,16 @@ grad_map['y'] = np.zeros((output_height, output_width))
 # % Covariance matrix of each gradient pixel
 grad_initial_variance = 10
 grad_map_covar = {}
-grad_map_covar['xx'] =  np.ones((output_height, output_width)) * grad_initial_variance
+grad_map_covar['xx'] = np.ones((output_height, output_width)) * grad_initial_variance
 grad_map_covar['xy'] = np.zeros((output_height, output_width))
 grad_map_covar['yx'] = np.zeros((output_height, output_width))
-grad_map_covar['yy'] =  np.ones((output_height, output_width)) * grad_initial_variance
+grad_map_covar['yy'] = np.ones((output_height, output_width)) * grad_initial_variance
 
 # % For efficiency, a structure, called event map, contains for every pixel
 # % the time of the last event and its rotation at that time.
 s = {}
 s['sae'] = -1e-6
-s['rotation'] = np.zeros((3,3))
+s['rotation'] = np.zeros((3, 3))
 s['rotation'].fill(np.NaN)
 # np.fill_diagonal(s['rotation'], np.NaN)
 event_map = np.zeros((dvs_parameters['sensor_height'], dvs_parameters['sensor_width']))
@@ -152,7 +152,6 @@ for i in range(dvs_parameters['sensor_height']):
 event_map = np.array(event_map)
 print(event_map.shape)
 
-
 rotmats_1stkey = list(rotmats_dict.keys())[0]
 rot0 = rotmats_dict[rotmats_1stkey]  # to center the map around the first pose
 one_vec = np.ones((num_events_batch, 1)) # ??
@@ -160,7 +159,7 @@ Id = np.eye(2) # ??
 
 ## Processing events
 print("Processing events")
-plt.figure()
+# plt.figure()
 fig_show_evol = plt.figure(facecolor='w')
 #units = normalized should be true
 first_plot = True # for efficient plotting
@@ -169,13 +168,18 @@ iEv = 0 # event counter
 iBatch = 1 # packet-of-events counter
 
 i=0
+counter = -1
 while True:
+    counter += 1
+    print(counter)
+    # print("i: ", i)
     if (iEv + num_events_batch > num_events):
+        print("No more events")
         break #% There are no more events
 
-    print("Showing events")
+    # print("Showing events")
     #% Get batch of events
-    events_batch = events[iEv:num_events_batch]
+    events_batch = events[iEv:iEv+num_events_batch]
     iEv = iEv + num_events_batch
     # print(events_batch)
 
@@ -196,10 +200,14 @@ while True:
     # print("Hello")
     # print(t_prev_batch)
 
-    #Get (interpolated) rotation of current event
-    t_ev_mean = (t_events_batch.iloc[0] + t_events_batch.iloc[-1]) * 0.5
+    #Get (interpolated) rot
+    # ation of current event
+    first_idx  = t_events_batch.index[0]
+    last_idx = t_events_batch.index[-1]
+    t_ev_mean = (t_events_batch.loc[first_idx] + t_events_batch.loc[last_idx]) * 0.5
     # print("Hi", poses['t'].iloc[-1])
     if t_ev_mean > poses['t'].iloc[-1]:
+        print("Event later than last known pose")
         break # event later than last known pose
 
 
@@ -223,29 +231,19 @@ while True:
 
     #  Get map point corresponding to previous event at same pixel
     rotated_vec_prev = np.zeros(rotated_vec.shape)
-    # print(rotated_vec_prev.shape)
-    # print(event_map.shape)
-    # print(event_map[109,109].rotation)
-    # exit()
-    # for ii in range(num_events_batch):
-    # print("BEARING: ", bearing_vec)
-    # print("Rot0: ", rot0)
-    # print("ROTaTED VEC PREV: ")
-    # print(rotated_vec_prev)
-
 
     # event_map = event_map.tolist() #make list to change single entries
     for ii in range(num_events_batch):
 
-        Rot_prev = event_map[x_events_batch[ii]][y_events_batch[ii]]['rotation'].copy()
+        Rot_prev = event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'].copy()
 
         rotated_vec_prev[:, ii] = rot0.T.dot(Rot_prev).dot(bearing_vec[:,ii])
         #print(rotated_vec_prev[:, ii])
         # Update last rotation and time of event(SAE)
         # print(event_map[x_events_batch[ii], y_events_batch[ii]])
         # print(event_map[x_events_batch[2]][y_events_batch[2]])
-        event_map[x_events_batch[ii]][y_events_batch[ii]]['sae'] = t_events_batch[ii]
-        event_map[x_events_batch[ii]][y_events_batch[ii]]['rotation'] = Rot
+        event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['sae'] = t_events_batch.iloc[ii]
+        event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'] = Rot
         # print(event_map[x_events_batch[2]][y_events_batch[2]])
 
     pm_prev = coordinate_transforms.project_equirectangular_projection(rotated_vec_prev, output_width, output_height)
@@ -257,8 +255,12 @@ while True:
     # print(sum(np.isnan(pm_prev[1,:])))
     # exit()
 
-    ##TODO: Include again in code in the end!!
     if (t_prev_batch[-1] < 0) or (t_prev_batch[-1] < poses['t'][0]):
+        # print(t_prev_batch)
+        # print("t_prev_batch[-1]: {}".format(t_prev_batch[-1]))
+        # print("poses['t'][0]: {}".format(poses['t'][0]))
+        # print("t_prev_batch[-1] < 0: {}".format(t_prev_batch[-1] < 0))
+        # print("t_prev_batch[-1] < poses['t'][0]: {}".format(t_prev_batch[-1] < poses['t'][0]))
         continue # initialization phase. Fill in event_map
 
     #  Discard nan values
@@ -267,9 +269,9 @@ while True:
     # print(num_uninitialized)
 
     # exit()
-    if (num_uninitialized > 0):
+    if True: #(num_uninitialized > 0):
         # % Delete uninitialized events
-        print('Deleting {} points'.format(str(num_uninitialized)))
+        # print('Deleting {} points'.format(str(num_uninitialized)))
         t_events_batch = np.array(t_events_batch.iloc[~mask_uninitialized].tolist())
         t_prev_batch = np.array(t_prev_batch[~mask_uninitialized].tolist())
 
@@ -294,6 +296,10 @@ while True:
 
     # Get velocity vector
     # print(pm - pm_prev)
+    # print(len(pm))
+    # print(len(pm_prev))
+    # print(len(event_rate))
+    # print(event_rate)
     vel = (pm - pm_prev) * event_rate  #TODO: Check for a point after the first to evaluate
     # exit()
 
@@ -346,4 +352,6 @@ while True:
         grad_map_covar['yx'][i][j] = Pg[k, 2]
         grad_map_covar['yy'][i][j] = Pg[k, 3]
         k += 1
-    exit()
+
+    iBatch = iBatch + 1
+    # exit()
