@@ -19,8 +19,11 @@ import math
 from scipy import io
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import pyquaternion
+import pylab
 
 import sample.integration_methods as integration_methods
 import sample.coordinate_transforms as coordinate_transforms
@@ -28,6 +31,7 @@ import sample.coordinate_transforms as coordinate_transforms
 
 ## ___Dataset___
 
+time_0 = time.time()
 # Data directories
 data_dir = '../data/synth1'
 calibration_dir = '../data/calibration'
@@ -105,13 +109,7 @@ print("Tail: \n", poses.tail(10))
 
 # Convert quaternions to rotation matrices and save in a dictionary TODO: UGLY AS HELL!!
 rotmats_dict = coordinate_transforms.q2R_dict(poses)
-# print(rotmats_dict)
-# print("Head: \n", poses.head(10))
-# print("Tail: \n", poses.tail(10))
 
-# rotmats_ctrl = np.zeros((num_poses, 3, 3))
-# for k in len(num_poses):
-#     rotmats_ctrl[k,:,:] =
 
 ## Image reconstruction using pixel-wise EKF
 # Input: events, contrast threshold and camera orientation (discrete poses + interpolation)
@@ -119,8 +117,10 @@ rotmats_dict = coordinate_transforms.q2R_dict(poses)
 # profile('on','-detail','builtin','-timer','performance')
 starttime = time.time()
 
-num_events_batch = 300
+num_events_batch = 3000
 num_events_display = 100000
+# num_events_batch = 300
+# num_events_display = 100000
 num_batches_display = math.floor(num_events_display / num_events_batch);
 
 # Variables related to the reconstructed image mosaic. EKF initialization
@@ -171,7 +171,7 @@ i=0
 counter = -1
 while True:
     counter += 1
-    print(counter)
+    # print(counter)
     # print("i: ", i)
     if (iEv + num_events_batch > num_events):
         print("No more events")
@@ -191,14 +191,9 @@ while True:
     ## Get the two map points correspondig to each event and update the event map (time and rotation of last event)
 
     # Get time of previous event at same DVS pixel
-    # print(x_events_batch[0])
-    # print(y_events_batch[0])
     idx_to_mat = x_events_batch * dvs_parameters['sensor_height'] + y_events_batch
 
-    # print(event_map[13, 125]['sae'])
     t_prev_batch = np.array([event_map[x, y]['sae'] for x, y in zip(x_events_batch, y_events_batch)]).T
-    # print("Hello")
-    # print(t_prev_batch)
 
     #Get (interpolated) rot
     # ation of current event
@@ -215,16 +210,17 @@ while True:
     Rot = coordinate_transforms.rotation_interpolation(
         poses['t'], rotmats_dict, t_ev_mean)
 
-
-    # print(np.concatenate((dvs_calibration['undist_pix_calibrated'][idx_to_mat, :], one_vec)))
-    bearing_vec = np.vstack((dvs_calibration['undist_pix_calibrated'][idx_to_mat, :].T[0],
-                             dvs_calibration['undist_pix_calibrated'][idx_to_mat, :].T[1],
-                             one_vec[:,0])) # 3xN
-    # print(bearing_vec)
-
+    try:
+        bearing_vec = np.vstack((dvs_calibration['undist_pix_calibrated'][idx_to_mat, :].T[0],
+                                 dvs_calibration['undist_pix_calibrated'][idx_to_mat, :].T[1],
+                                 one_vec[:,0])) # 3xN
+    except ValueError:
+        print(dvs_calibration['undist_pix_calibrated'][idx_to_mat, :].T[0].shape)
+        print(dvs_calibration['undist_pix_calibrated'][idx_to_mat, :].T[1].shape)
+        print(one_vec[:,0].shape)
+        print("Event  # {}".format(iEv))
+        break
     # Get map point corresponding to current event
-    # print(rot0.shape)
-    # print(Rot.shape)
     rotated_vec = rot0.T.dot(Rot).dot(bearing_vec)
     # print(rotated_vec)
     pm = coordinate_transforms.project_equirectangular_projection(rotated_vec, output_width, output_height)
@@ -276,8 +272,6 @@ while True:
         t_prev_batch = np.array(t_prev_batch[~mask_uninitialized].tolist())
 
         pol_events_batch = np.array(pol_events_batch[~mask_uninitialized].tolist())
-        # pm = pm[:][~mask_uninitialized].tolist()
-        # pm_prev = pm[:][~mask_uninitialized].tolist()
         pm_ = pm.copy()
         pm_prev_ = pm_prev.copy()
         pm = []
@@ -288,20 +282,13 @@ while True:
             pm_prev.append(row[~mask_uninitialized].tolist())
         pm = np.array(pm)
         pm_prev = np.array(pm_prev)
-    # print(len(pm[0]))
 
     # Get time since previous event at same pixel
     tc = t_events_batch - t_prev_batch
     event_rate = 1./(tc + 1e-12) #% measurement or observation(z)
 
     # Get velocity vector
-    # print(pm - pm_prev)
-    # print(len(pm))
-    # print(len(pm_prev))
-    # print(len(event_rate))
-    # print(event_rate)
     vel = (pm - pm_prev) * event_rate  #TODO: Check for a point after the first to evaluate
-    # exit()
 
     ## Extended Kalman Filter (EKF) for the intensity gradient map.
     # Get gradient and covariance at current map points pm
@@ -318,8 +305,6 @@ while True:
     # EKF update
     if measurement_criterion == 'contrast':
         # Use contrast as measurement function
-        # print("NOW")
-        # print(gm.shape)
         dhdg = vel.T * np.array([tc * pol_events_batch, tc * pol_events_batch]).T # derivative of measurement function
         nu_innovation = dvs_parameters['contrast_threshold'] - np.sum(dhdg * gm, axis=1)
     else:
@@ -341,12 +326,28 @@ while True:
     # print(Pg) #TODO: Test with points after the first one...
 
     # Store updated values
-    gm = np.array([[grad_map['x'][i][j], grad_map['y'][i][j]] for i, j in zip(ir, ic)])
 
+    # print("Starting...")
     k = 0
+    # f0 = 0
+    # f1 = 0
+    # fn = 0
+    # c0 = 0
+    # c1 = 0
+    # c2 = 0
+    # c3 = 0
+    # cn = 0
     for i, j in zip(ir, ic):
         grad_map['x'][i][j] = gm[k, 0]
         grad_map['y'][i][j] = gm[k, 1]
+
+        # if gm[k, 0] > 0:
+        #     f0+=1
+        # elif gm[k, 1] > 0:
+        #     f1+=1
+        # else:
+        #     fn+=1
+
         grad_map_covar['xx'][i][j] = Pg[k, 0]
         grad_map_covar['xy'][i][j] = Pg[k, 1]
         grad_map_covar['yx'][i][j] = Pg[k, 2]
@@ -354,4 +355,149 @@ while True:
         k += 1
 
     iBatch = iBatch + 1
-    # exit()
+    # print("f0: ", f0)
+    # print("f1: ", f1)
+    # print("fn: ", fn)
+    # print("c0: ", c0)
+    # print("c1: ", c1)
+    # print("c2: ", c2)
+    # print("c3: ", c3)
+    # print("cn: ", cn)
+
+
+    # print(grad_map['x'])
+    # print(grad_map_covar['xx'])
+    # print(grad_map_covar['xy'])
+    # print(grad_map_covar['yx'])
+    # print(grad_map_covar['yy'])
+    #
+
+
+    if False: #iBatch % num_batches_display == 0:
+        print("Update display: Event # {}".format(iEv))
+        idx_pos = pol_events_batch > 0
+        idx_neg = pol_events_batch < 0
+
+        trace_map = grad_map_covar['xx'] + grad_map_covar['yy']
+        grad_map_clip = {}
+        grad_map_clip['x'] = grad_map['x']
+        grad_map_clip['y'] = grad_map['y']
+        mask = trace_map > 0.05 # % reconstruct only gradients with small covariance
+        grad_map_clip['x'][mask] = 0
+        grad_map_clip['x'][mask] = 0
+
+        rec_image = integration_methods.frankotchellappa(grad_map_clip['x'], grad_map_clip['y']);
+        rec_image = rec_image - np.mean(rec_image)
+
+
+        if first_plot:
+            first_plot = False
+            # Plot points on panoramic image, colored according to polarity
+            # fig_events = plt.figure(1)
+            # ax_events = fig_events.add_subplot(111)
+            # h_map_pts_p, = ax_events.plot(pm[0, idx_pos], pm[1, idx_pos], ',b')
+            # h_map_pts_n, = ax_events.plot(pm[0, idx_neg], pm[1, idx_neg], ',r')
+            # plt.xlim([0, output_width])
+            # plt.ylim([0, output_height])
+            # plt.title("Map points from events"))
+
+            # plt.ion()
+            # plt.show()
+
+            # Display reconstructed image
+            # fig_reconstructed = plt.figure(2)
+            # ax_reconstructed = fig_reconstructed.add_subplot(111)
+            # maximum = np.max(np.abs(rec_image))
+            # minimum = np.min(np.abs(rec_image))
+            # h_img = plt.imshow(rec_image / maximum, cmap=plt.cm.binary, vmin=-1, vmax=1)
+
+            # Display one of the gradient images
+            fig_gradient = plt.figure(3)
+            ax_gradient = fig_gradient.add_subplot(111)
+            h_gx = plt.imshow(grad_map['x'] / np.std(grad_map['x']), cmap=plt.cm.binary, vmin=-5, vmax=5)
+            # plt.xlim([0, output_width])
+            # plt.ylim([0, output_height])
+            plt.xlim([0, output_width])
+            plt.ylim([0, output_height])
+            plt.ion()
+            plt.show()
+
+            # print("MAX: ", np.max([np.abs(np.max(rec_image[0])), np.abs(np.min(rec_image[0]))]))
+            # print(np.max(np.abs(rec_image[0])))
+
+        else:
+            # h_map_pts_p.set_data(pm[0, idx_pos], pm[1, idx_pos])
+            # h_map_pts_n.set_data(pm[0, idx_neg], pm[1, idx_neg])
+            # maximum = np.max(np.abs(rec_image))
+            # minimum = np.min(np.abs(rec_image))
+            # h_img.set_data(rec_image / maximum)
+
+            h_gx.set_data(grad_map['x'] / np.std(grad_map['x']))
+            # ax_events.relim()
+            plt.pause(0.01)
+
+endtime = time.time()
+print("Done")
+print("Elapsed time: {} seconds".format(endtime-time_0))
+
+
+#Display in separate figure
+
+print("Total summed Events # {}".format(iEv))
+idx_pos = pol_events_batch > 0
+idx_neg = pol_events_batch < 0
+
+trace_map = grad_map_covar['xx'] + grad_map_covar['yy']
+grad_map_clip = {}
+grad_map_clip['x'] = grad_map['x']
+grad_map_clip['y'] = grad_map['y']
+mask = trace_map > 0.05  # % reconstruct only gradients with small covariance
+grad_map_clip['x'][mask] = 0
+grad_map_clip['x'][mask] = 0
+rec_image = integration_methods.frankotchellappa(grad_map_clip['x'], grad_map_clip['y']);
+rec_image = rec_image - np.mean(rec_image)
+
+rec_image_normalized = rec_image / np.max(np.abs(rec_image))
+fig_normalized = plt.figure(1)
+plt.imshow(rec_image_normalized, cmap=plt.cm.binary)
+plt.title("Reconstructed image (log)")
+plt.savefig("reconstructed_log.png")
+plt.show()
+#
+rec_image_exp = np.exp(0.001 + rec_image)
+fig_normalized_linear = plt.figure(2)
+plt.imshow(rec_image_exp, cmap=plt.cm.binary)
+plt.title("Reconstructed image (linear)")
+plt.savefig("reconstructed_linear.png")
+plt.show()
+
+fig_gradientx = plt.figure(3)
+h_gx = plt.imshow(grad_map['x'] / np.std(grad_map['x']), cmap=plt.cm.binary, vmin=-5, vmax=5)
+plt.title("Gradient in X")
+plt.savefig("gradient_x.png")
+plt.show()
+
+fig_gradienty = plt.figure(4)
+h_gx = plt.imshow(grad_map['y'] / np.std(grad_map['y']), cmap=plt.cm.binary, vmin=-5, vmax=5)
+plt.title("Gradient in Y")
+plt.savefig("gradient_y.png")
+plt.show()
+
+fig_tracemap = plt.figure(5)
+h_gx = plt.imshow(trace_map/np.max(trace_map), cmap=plt.cm.binary, vmin=0, vmax=1)
+plt.title("Trace of Covariance")
+plt.savefig("trace.png")
+plt.show()
+
+# g_ang = -1*np.arctan2(grad_map['y'], grad_map['x'])
+# g_grad = np.sqrt(np.power(grad_map['x'], 2) + np.power(grad_map['y'], 2))
+# g_grad_unit = g_grad/1.
+# g_grad_unit[g_grad_unit > 1.0] = 1.0
+# g_ang_unit = g_ang/360. + 0.5
+
+
+
+
+
+
+

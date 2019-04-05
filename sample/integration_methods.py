@@ -25,6 +25,7 @@ def frankotchellappa(dzdx, dzdy):
     :param dzdy:
     :return: z
     """
+    # print(dzdx[0,0])
 
     rows, cols = np.array(dzdx).shape
 
@@ -46,10 +47,15 @@ def frankotchellappa(dzdx, dzdy):
     j = 1j
 
     # % dd = wx.^2 + wy.^2;
-    Z = (-j * wx * DZDX, -j * wy * DZDY) / (wx**2 + wy**2 + eps)
+    Z = (-j * wx * DZDX -j * wy * DZDY) / (np.power(wx, 2) + np.power(wy, 2) + eps)
+
 
     z = np.real(np.fft.ifft2(Z))  # Reconstruction
     z = z - np.min(z)
     z = z/2
-
+    # print(z[0,0])
+    # print(z[100, 100])
+    # print(z[554, 100])
+    # print(z.shape)
+    # exit()
     return z
