@@ -118,10 +118,10 @@ rotmats_dict = coordinate_transforms.q2R_dict(poses)
 starttime = time.time()
 
 num_events_batch = 3000
-num_events_display = 100000
+num_events_display = 9000
 # num_events_batch = 300
 # num_events_display = 100000
-num_batches_display = math.floor(num_events_display / num_events_batch);
+num_batches_display = math.floor(num_events_display / num_events_batch)
 
 # Variables related to the reconstructed image mosaic. EKF initialization
 # Gradient map
@@ -136,52 +136,47 @@ grad_map_covar['xy'] = np.zeros((output_height, output_width))
 grad_map_covar['yx'] = np.zeros((output_height, output_width))
 grad_map_covar['yy'] = np.ones((output_height, output_width)) * grad_initial_variance
 
-# % For efficiency, a structure, called event map, contains for every pixel
-# % the time of the last event and its rotation at that time.
-s = {}
-s['sae'] = -1e-6
-s['rotation'] = np.zeros((3, 3))
+# For efficiency, a structure, called event map, contains for every pixel
+# the time of the last event and its rotation at that time.
+s = {
+    'sae': -1e-6,
+    'rotation': np.zeros((3, 3))
+}
 s['rotation'].fill(np.NaN)
-# np.fill_diagonal(s['rotation'], np.NaN)
 event_map = np.zeros((dvs_parameters['sensor_height'], dvs_parameters['sensor_width']))
 event_map = event_map.tolist()
 for i in range(dvs_parameters['sensor_height']):
     for j in range(dvs_parameters['sensor_width']):
         event_map[i][j] = s.copy()
-# event_map = np.matlib.repmat(s.copy(), dvs_parameters['sensor_height'], dvs_parameters['sensor_width']) # ATTENTION: all s.copy are the same!!
 event_map = np.array(event_map)
 print(event_map.shape)
 
 rotmats_1stkey = list(rotmats_dict.keys())[0]
-rot0 = rotmats_dict[rotmats_1stkey]  # to center the map around the first pose
+rot0 = rotmats_dict[rotmats_1stkey]  # to later center the map around the first pose
 one_vec = np.ones((num_events_batch, 1)) # ??
 Id = np.eye(2) # ??
 
 ## Processing events
 print("Processing events")
 # plt.figure()
-fig_show_evol = plt.figure(facecolor='w')
-#units = normalized should be true
+# fig_show_evol = plt.figure(facecolor='w')
+# units = normalized should be true
 first_plot = True # for efficient plotting
 
 iEv = 0 # event counter
 iBatch = 1 # packet-of-events counter
 
 i=0
-counter = -1
+# counter = -1
 while True:
-    counter += 1
-    # print(counter)
-    # print("i: ", i)
+    # counter += 1
     if (iEv + num_events_batch > num_events):
         print("No more events")
-        break #% There are no more events
+        break
 
-    # print("Showing events")
     #% Get batch of events
     events_batch = events[iEv:iEv+num_events_batch]
     iEv = iEv + num_events_batch
-    # print(events_batch)
 
     t_events_batch = events_batch['t']
     x_events_batch = events_batch['x']
@@ -195,20 +190,16 @@ while True:
 
     t_prev_batch = np.array([event_map[x, y]['sae'] for x, y in zip(x_events_batch, y_events_batch)]).T
 
-    #Get (interpolated) rot
-    # ation of current event
+    #Get (interpolated) rotation of current event
     first_idx  = t_events_batch.index[0]
     last_idx = t_events_batch.index[-1]
     t_ev_mean = (t_events_batch.loc[first_idx] + t_events_batch.loc[last_idx]) * 0.5
-    # print("Hi", poses['t'].iloc[-1])
     if t_ev_mean > poses['t'].iloc[-1]:
         print("Event later than last known pose")
         break # event later than last known pose
 
+    Rot = coordinate_transforms.rotation_interpolation(poses['t'], rotmats_dict, t_ev_mean)
 
-    # print(rotmats_dict)
-    Rot = coordinate_transforms.rotation_interpolation(
-        poses['t'], rotmats_dict, t_ev_mean)
 
     try:
         bearing_vec = np.vstack((dvs_calibration['undist_pix_calibrated'][idx_to_mat, :].T[0],
@@ -220,51 +211,29 @@ while True:
         print(one_vec[:,0].shape)
         print("Event  # {}".format(iEv))
         break
+
     # Get map point corresponding to current event
     rotated_vec = rot0.T.dot(Rot).dot(bearing_vec)
-    # print(rotated_vec)
     pm = coordinate_transforms.project_equirectangular_projection(rotated_vec, output_width, output_height)
 
     #  Get map point corresponding to previous event at same pixel
     rotated_vec_prev = np.zeros(rotated_vec.shape)
-
-    # event_map = event_map.tolist() #make list to change single entries
     for ii in range(num_events_batch):
-
         Rot_prev = event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'].copy()
-
-        rotated_vec_prev[:, ii] = rot0.T.dot(Rot_prev).dot(bearing_vec[:,ii])
-        #print(rotated_vec_prev[:, ii])
+        rotated_vec_prev[:, ii] = rot0.T.dot(Rot_prev).dot(bearing_vec[:, ii])
         # Update last rotation and time of event(SAE)
-        # print(event_map[x_events_batch[ii], y_events_batch[ii]])
-        # print(event_map[x_events_batch[2]][y_events_batch[2]])
         event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['sae'] = t_events_batch.iloc[ii]
         event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'] = Rot
-        # print(event_map[x_events_batch[2]][y_events_batch[2]])
 
     pm_prev = coordinate_transforms.project_equirectangular_projection(rotated_vec_prev, output_width, output_height)
-    # print("PM_PREV: ", pm_prev) ## Tested: Looks just as matlab output (still with discrepancies on ~5th digit)
-    # print("ISNAN?")
-
-    # print(pm - pm_prev) ##ATTENTION, actually differs from MATLAB output. Only a number of 1e13, so shouldn't matter
-    # print(sum(np.isnan(pm_prev[0,:]) | np.isnan(pm_prev[1,:])))
-    # print(sum(np.isnan(pm_prev[1,:])))
-    # exit()
 
     if (t_prev_batch[-1] < 0) or (t_prev_batch[-1] < poses['t'][0]):
-        # print(t_prev_batch)
-        # print("t_prev_batch[-1]: {}".format(t_prev_batch[-1]))
-        # print("poses['t'][0]: {}".format(poses['t'][0]))
-        # print("t_prev_batch[-1] < 0: {}".format(t_prev_batch[-1] < 0))
-        # print("t_prev_batch[-1] < poses['t'][0]: {}".format(t_prev_batch[-1] < poses['t'][0]))
         continue # initialization phase. Fill in event_map
 
     #  Discard nan values
     mask_uninitialized = np.isnan(pm_prev[0,:]) | np.isnan(pm_prev[1,:])
     num_uninitialized = sum(mask_uninitialized)
-    # print(num_uninitialized)
 
-    # exit()
     if True: #(num_uninitialized > 0):
         # % Delete uninitialized events
         # print('Deleting {} points'.format(str(num_uninitialized)))
@@ -322,32 +291,11 @@ while True:
     gm = gm + Kalman_gain * np.array([nu_innovation, nu_innovation]).T
     Pg = Pg - np.array([Pg_dhdg[:, 0] * Kalman_gain[:, 0], Pg_dhdg[:, 0] * Kalman_gain[:, 1],
                Pg_dhdg[:, 1] * Kalman_gain[:, 0], Pg_dhdg[:, 1] * Kalman_gain[:, 1]]).T
-    # print(gm)
-    # print(Pg) #TODO: Test with points after the first one...
 
-    # Store updated values
-
-    # print("Starting...")
     k = 0
-    # f0 = 0
-    # f1 = 0
-    # fn = 0
-    # c0 = 0
-    # c1 = 0
-    # c2 = 0
-    # c3 = 0
-    # cn = 0
     for i, j in zip(ir, ic):
         grad_map['x'][i][j] = gm[k, 0]
         grad_map['y'][i][j] = gm[k, 1]
-
-        # if gm[k, 0] > 0:
-        #     f0+=1
-        # elif gm[k, 1] > 0:
-        #     f1+=1
-        # else:
-        #     fn+=1
-
         grad_map_covar['xx'][i][j] = Pg[k, 0]
         grad_map_covar['xy'][i][j] = Pg[k, 1]
         grad_map_covar['yx'][i][j] = Pg[k, 2]
@@ -355,25 +303,8 @@ while True:
         k += 1
 
     iBatch = iBatch + 1
-    # print("f0: ", f0)
-    # print("f1: ", f1)
-    # print("fn: ", fn)
-    # print("c0: ", c0)
-    # print("c1: ", c1)
-    # print("c2: ", c2)
-    # print("c3: ", c3)
-    # print("cn: ", cn)
 
-
-    # print(grad_map['x'])
-    # print(grad_map_covar['xx'])
-    # print(grad_map_covar['xy'])
-    # print(grad_map_covar['yx'])
-    # print(grad_map_covar['yy'])
-    #
-
-
-    if False: #iBatch % num_batches_display == 0:
+    if iBatch % num_batches_display == 0:
         print("Update display: Event # {}".format(iEv))
         idx_pos = pol_events_batch > 0
         idx_neg = pol_events_batch < 0
@@ -393,16 +324,16 @@ while True:
         if first_plot:
             first_plot = False
             # Plot points on panoramic image, colored according to polarity
-            # fig_events = plt.figure(1)
-            # ax_events = fig_events.add_subplot(111)
-            # h_map_pts_p, = ax_events.plot(pm[0, idx_pos], pm[1, idx_pos], ',b')
-            # h_map_pts_n, = ax_events.plot(pm[0, idx_neg], pm[1, idx_neg], ',r')
-            # plt.xlim([0, output_width])
-            # plt.ylim([0, output_height])
-            # plt.title("Map points from events"))
+            fig_events = plt.figure(1)
+            ax_events = fig_events.add_subplot(111)
+            h_map_pts_p, = ax_events.plot(pm[0, idx_pos], pm[1, idx_pos], ',b')
+            h_map_pts_n, = ax_events.plot(pm[0, idx_neg], pm[1, idx_neg], ',r')
+            plt.xlim([0, output_width])
+            plt.ylim([0, output_height])
+            plt.title("Map points from events")
 
-            # plt.ion()
-            # plt.show()
+            plt.ion()
+            plt.show()
 
             # Display reconstructed image
             # fig_reconstructed = plt.figure(2)
@@ -412,27 +343,27 @@ while True:
             # h_img = plt.imshow(rec_image / maximum, cmap=plt.cm.binary, vmin=-1, vmax=1)
 
             # Display one of the gradient images
-            fig_gradient = plt.figure(3)
-            ax_gradient = fig_gradient.add_subplot(111)
-            h_gx = plt.imshow(grad_map['x'] / np.std(grad_map['x']), cmap=plt.cm.binary, vmin=-5, vmax=5)
+            # fig_gradient = plt.figure(3)
+            # ax_gradient = fig_gradient.add_subplot(111)
+            # h_gx = plt.imshow(grad_map['x'] / np.std(grad_map['x']), cmap=plt.cm.binary, vmin=-5, vmax=5)
+            # # plt.xlim([0, output_width])
+            # # plt.ylim([0, output_height])
             # plt.xlim([0, output_width])
             # plt.ylim([0, output_height])
-            plt.xlim([0, output_width])
-            plt.ylim([0, output_height])
-            plt.ion()
-            plt.show()
+            # plt.ion()
+            # plt.show()
 
             # print("MAX: ", np.max([np.abs(np.max(rec_image[0])), np.abs(np.min(rec_image[0]))]))
             # print(np.max(np.abs(rec_image[0])))
 
         else:
-            # h_map_pts_p.set_data(pm[0, idx_pos], pm[1, idx_pos])
-            # h_map_pts_n.set_data(pm[0, idx_neg], pm[1, idx_neg])
+            h_map_pts_p.set_data(pm[0, idx_pos], pm[1, idx_pos])
+            h_map_pts_n.set_data(pm[0, idx_neg], pm[1, idx_neg])
             # maximum = np.max(np.abs(rec_image))
             # minimum = np.min(np.abs(rec_image))
             # h_img.set_data(rec_image / maximum)
 
-            h_gx.set_data(grad_map['x'] / np.std(grad_map['x']))
+            # h_gx.set_data(grad_map['x'] / np.std(grad_map['x']))
             # ax_events.relim()
             plt.pause(0.01)
 
