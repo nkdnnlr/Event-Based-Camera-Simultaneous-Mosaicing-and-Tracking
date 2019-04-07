@@ -25,8 +25,23 @@ import matplotlib.pyplot as plt
 import pyquaternion
 import pylab
 
+# Provide function handles to convert from rotation matrix to axis-angle and vice-versa
 import sample.integration_methods as integration_methods
 import sample.coordinate_transforms as coordinate_transforms
+
+
+## Run settings:
+num_events_batch = 300
+num_events_display = 6000
+plot_events_animation = False
+plot_events_pm_animation = False
+
+# Methods used:
+# 1) Select measurement function used for brightness gradient estimation
+#    via Extended Kalman Filter (EKF). Options are:
+#    'contrast'    : Constrast criterion (Gallego et al. arXiv 2015)
+#    'event_rate'  : Event rate criterion (Kim et al. BMVC 2014)
+measurement_criterion = 'event_rate'
 
 
 ## ___Dataset___
@@ -35,6 +50,12 @@ time_0 = time.time()
 # Data directories
 data_dir = '../data/synth1'
 calibration_dir = '../data/calibration'
+output_dir = '../output'
+images_dir = os.path.join(output_dir, '{0}pbatch_{1}'.format(num_events_batch, measurement_criterion))
+print(images_dir)
+if not os.path.exists(images_dir):
+    os.makedirs(images_dir)
+
 
 # Calibration data
 dvs_calibration = io.loadmat(os.path.join(calibration_dir, 'DVS_synth_undistorted_pixels.mat'))
@@ -52,12 +73,6 @@ dvs_parameters = {'sensor_height': 128, 'sensor_width': 128, 'contrast_threshold
 output_height = 1024
 output_width = 2 * output_height
 
-# Methods used:
-# 1) Select measurement function used for brightness gradient estimation
-#    via Extended Kalman Filter (EKF). Options are:
-#    'contrast'    : Constrast criterion (Gallego et al. arXiv 2015)
-#    'event rate'  : Event rate criterion (Kim et al. BMVC 2014)
-measurement_criterion = 'contrast'
 
 # Set the expected noise level (variance of the measurements).
 if measurement_criterion == 'contrast':
@@ -71,10 +86,6 @@ if measurement_criterion == 'event_rate':
 #    'frankotchellappa'    : Does not require a MATLAB toolbox
 integration_method = 'frankotchellappa'
 
-
-# Provide function handles to convert from rotation matrix to axis-angle and vice-versa
-f_r2a = coordinate_transforms.r2aa
-f_a2r = coordinate_transforms.aa2r
 
 ## Loading Events
 print("Loading Events")
@@ -92,8 +103,6 @@ events['t'] = events['sec']-first_event_sec + 1e-9*(events['nsec']-first_event_n
 events = events[['t', 'x', 'y', 'pol']]
 print("Head: \n", events.head(10))
 print("Tail: \n", events.tail(10))
-
-
 
 ##Loading Camera poses
 print("Loading Camera Orientations")
@@ -117,11 +126,14 @@ rotmats_dict = coordinate_transforms.q2R_dict(poses)
 # profile('on','-detail','builtin','-timer','performance')
 starttime = time.time()
 
-num_events_batch = 3000
-num_events_display = 9000
+
 # num_events_batch = 300
 # num_events_display = 100000
 num_batches_display = math.floor(num_events_display / num_events_batch)
+
+
+
+
 
 # Variables related to the reconstructed image mosaic. EKF initialization
 # Gradient map
@@ -178,10 +190,15 @@ while True:
     events_batch = events[iEv:iEv+num_events_batch]
     iEv = iEv + num_events_batch
 
+    events_batch_pos = events_batch[events_batch['pol'] == 1]
+    events_batch_neg = events_batch[events_batch['pol'] == 0]
+
+
     t_events_batch = events_batch['t']
     x_events_batch = events_batch['x']
     y_events_batch = events_batch['y']
     pol_events_batch = 2 * (events_batch['pol'] - 0.5)
+
 
     ## Get the two map points correspondig to each event and update the event map (time and rotation of last event)
 
@@ -304,7 +321,7 @@ while True:
 
     iBatch = iBatch + 1
 
-    if iBatch % num_batches_display == 0:
+    if False: #iBatch % num_batches_display == 0:
         print("Update display: Event # {}".format(iEv))
         idx_pos = pol_events_batch > 0
         idx_neg = pol_events_batch < 0
@@ -323,17 +340,32 @@ while True:
 
         if first_plot:
             first_plot = False
-            # Plot points on panoramic image, colored according to polarity
-            fig_events = plt.figure(1)
-            ax_events = fig_events.add_subplot(111)
-            h_map_pts_p, = ax_events.plot(pm[0, idx_pos], pm[1, idx_pos], ',b')
-            h_map_pts_n, = ax_events.plot(pm[0, idx_neg], pm[1, idx_neg], ',r')
-            plt.xlim([0, output_width])
-            plt.ylim([0, output_height])
-            plt.title("Map points from events")
 
-            plt.ion()
-            plt.show()
+            if plot_events_animation:
+                # Plot events on sensor image
+                fig_events_raw = plt.figure(0)
+                ax_events_raw = fig_events_raw.add_subplot(111)
+                events_p, = ax_events_raw.plot(events_batch_pos['x'], events_batch_pos['y'], ',b')
+                events_n, = ax_events_raw.plot(events_batch_neg['x'], events_batch_neg['y'], ',r')
+                plt.xlim([0, 128])
+                plt.ylim([0, 128])
+                plt.title("Events on Sensor")
+
+                plt.ion()
+                plt.show()
+
+            if plot_events_pm_animation:
+                # Plot points on panoramic image, colored according to polarity
+                fig_events = plt.figure(1)
+                ax_events = fig_events.add_subplot(111)
+                h_map_pts_p, = ax_events.plot(pm[0, idx_pos], pm[1, idx_pos], ',b')
+                h_map_pts_n, = ax_events.plot(pm[0, idx_neg], pm[1, idx_neg], ',r')
+                plt.xlim([0, output_width])
+                plt.ylim([0, output_height])
+                plt.title("Map points from events")
+
+                plt.ion()
+                plt.show()
 
             # Display reconstructed image
             # fig_reconstructed = plt.figure(2)
@@ -357,8 +389,16 @@ while True:
             # print(np.max(np.abs(rec_image[0])))
 
         else:
-            h_map_pts_p.set_data(pm[0, idx_pos], pm[1, idx_pos])
-            h_map_pts_n.set_data(pm[0, idx_neg], pm[1, idx_neg])
+            if plot_events_animation:
+                events_p.set_data(events_batch_pos['x'], events_batch_pos['y'])
+                events_n.set_data(events_batch_neg['x'], events_batch_neg['y'])
+                plt.savefig(output_dir + '/animation/events_raw/' + 'fig_events_{}.png'.format(str(iEv).zfill(10)))
+
+
+            if plot_events_pm_animation:
+                h_map_pts_p.set_data(pm[0, idx_pos], pm[1, idx_pos])
+                h_map_pts_n.set_data(pm[0, idx_neg], pm[1, idx_neg])
+                plt.savefig(output_dir + '/animation/events_pm/' + "fig_events_{}.png".format(str(iEv).zfill(10)))
             # maximum = np.max(np.abs(rec_image))
             # minimum = np.min(np.abs(rec_image))
             # h_img.set_data(rec_image / maximum)
@@ -392,32 +432,32 @@ rec_image_normalized = rec_image / np.max(np.abs(rec_image))
 fig_normalized = plt.figure(1)
 plt.imshow(rec_image_normalized, cmap=plt.cm.binary)
 plt.title("Reconstructed image (log)")
-plt.savefig("reconstructed_log.png")
+plt.savefig(os.path.join(images_dir, "reconstructed_log.png"))
 plt.show()
 #
 rec_image_exp = np.exp(0.001 + rec_image)
 fig_normalized_linear = plt.figure(2)
 plt.imshow(rec_image_exp, cmap=plt.cm.binary)
 plt.title("Reconstructed image (linear)")
-plt.savefig("reconstructed_linear.png")
+plt.savefig(os.path.join(images_dir, "reconstructed_linear.png"))
 plt.show()
 
 fig_gradientx = plt.figure(3)
 h_gx = plt.imshow(grad_map['x'] / np.std(grad_map['x']), cmap=plt.cm.binary, vmin=-5, vmax=5)
 plt.title("Gradient in X")
-plt.savefig("gradient_x.png")
+plt.savefig(os.path.join(images_dir, "gradient_x.png"))
 plt.show()
 
 fig_gradienty = plt.figure(4)
 h_gx = plt.imshow(grad_map['y'] / np.std(grad_map['y']), cmap=plt.cm.binary, vmin=-5, vmax=5)
 plt.title("Gradient in Y")
-plt.savefig("gradient_y.png")
+plt.savefig(os.path.join(images_dir, "gradient_y.png"))
 plt.show()
 
 fig_tracemap = plt.figure(5)
 h_gx = plt.imshow(trace_map/np.max(trace_map), cmap=plt.cm.binary, vmin=0, vmax=1)
 plt.title("Trace of Covariance")
-plt.savefig("trace.png")
+plt.savefig(os.path.join(images_dir, "trace.png"))
 plt.show()
 
 # g_ang = -1*np.arctan2(grad_map['y'], grad_map['x'])

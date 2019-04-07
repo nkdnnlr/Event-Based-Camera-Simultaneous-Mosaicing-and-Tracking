@@ -1,73 +1,79 @@
-# import numpy as np
-# import pandas as pd
-# #
-# # dzdx = np.array([[1,2,3], [1,2,5], [4,5,6]])
-# # M = np.matrix([[1,2,3], [1,2,5], [4,5,6]])
-# #
-# # print(dzdx.shape==(3,3))
-# # print(M.shape)
-# # print(dzdx.size)
-# # print(M.transpose())
-# #
-# # print(M)
-# # print(M[:,1].transpose()[0])
-# # R=M
-# # print((R.shape == (3,3)) & (R.size == 9))
-# #
-# # AA = np.array([1,2,3,1])
-# # print(AA.size)
-# # print((AA.shape == (4,1)) | (AA.shape == (1,4)))
-# # print(AA)
-# # print(AA[0:2])
-# #
-# # # rows, cols = np.array(dzdx).shape
-# #
-# # # wx, wy = np.meshgrid(np.arange(-np.pi/2 , np.pi/2 , np.pi / (cols - 1)), np.arange(-np.pi/2, np.pi/2, np.pi/(rows - 1)))
-# #
-# # # print(np.arange(1,4,0.2))
-# #
-# # # print(wx)
-# # # print(wy)
-#
-# omega = 1.4
-# theta = 0.4
-# print(np.identity(3) + omega * np.sin(theta) + omega * omega * (1 - np.cos(theta)))
-#
-# a=[1,3,45]
-# print(a.append(3))
-#
-# A = np.array([[1, 0, 1], [-1, -2, 0], [0, 1, -1]])
-# A = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
-# U, S_, V_t = np.linalg.svd(A, full_matrices=True)
-# V = V_t.T
-# print(U)
-# S = np.zeros((len(U), len(V_t)))
-# for idx, element in enumerate(S_):
-#     S[idx, idx] = element
-# print(S)
-# print(V)
-#
-# print(U.dot(S).dot(V_t))
-#
-# print(np.eye(3))
-# d = np.zeros((3,3))
-# a = np.fill_diagonal(d, np.NaN)
-# print(d)
-#
-# df = pd.DataFrame(np.random.randn(10, 2), columns=list('ab'))
-# print(df)
-# print(df.loc[df['a'] > 1])
-# print(df.loc[df['a'] > 1].index.max())
-#
-#
-
-# import scipy.io
-# mat = scipy.io.loadmat("../data/calibration/DVS_synth_undistorted_pixels.mat")
-# print(mat['dist_coeffs'])
+#!/usr/bin/env python
 
 import numpy as np
-a = np.array([[1,2,3],[4,5,6]])
-b = np.array([7,8,9])
+import time
+import matplotlib
+matplotlib.use('TKAgg')
+from matplotlib import pyplot as plt
 
-print(a/b)
-# print(np.vstack((a[0], a[1], b)))
+
+def randomwalk(dims=(256, 256), n=20, sigma=5, alpha=0.95, seed=1):
+    """ A simple random walk with memory """
+
+    r, c = dims
+    gen = np.random.RandomState(seed)
+    pos = gen.rand(2, n) * ((r,), (c,))
+    old_delta = gen.randn(2, n) * sigma
+
+    while True:
+        delta = (1. - alpha) * gen.randn(2, n) * sigma + alpha * old_delta
+        pos += delta
+        for ii in range(n):
+            if not (0. <= pos[0, ii] < r):
+                pos[0, ii] = abs(pos[0, ii] % r)
+            if not (0. <= pos[1, ii] < c):
+                pos[1, ii] = abs(pos[1, ii] % c)
+        old_delta = delta
+        yield pos
+
+
+def run(niter=1000, doblit=True):
+    """
+    Display the simulation using matplotlib, optionally using blit for speed
+    """
+
+    fig, ax = plt.subplots(1, 1)
+    ax.set_aspect('equal')
+    ax.set_xlim(0, 255)
+    ax.set_ylim(0, 255)
+    # ax.hold(True)
+    rw = randomwalk()
+    x, y = rw.__next__()
+
+    plt.show(False)
+    plt.draw()
+
+    if doblit:
+        # cache the background
+        background = fig.canvas.copy_from_bbox(ax.bbox)
+
+    points = ax.plot(x, y, 'o')[0]
+    tic = time.time()
+
+    for ii in range(niter):
+
+        # update the xy data
+        x, y = rw.__next__()
+        points.set_data(x, y)
+
+        if doblit:
+            # restore background
+            fig.canvas.restore_region(background)
+
+            # redraw just the points
+            ax.draw_artist(points)
+
+            # fill in the axes rectangle
+            fig.canvas.blit(ax.bbox)
+
+        else:
+            # redraw everything
+            fig.canvas.draw()
+
+    plt.close(fig)
+    print("Blit = %s, average FPS: %.2f" % (
+        str(doblit), niter / (time.time() - tic)))
+
+if __name__ == '__main__':
+    run(doblit=False)
+    run(doblit=True)
