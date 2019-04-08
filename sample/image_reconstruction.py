@@ -41,7 +41,7 @@ plot_events_pm_animation = False
 #    via Extended Kalman Filter (EKF). Options are:
 #    'contrast'    : Constrast criterion (Gallego et al. arXiv 2015)
 #    'event_rate'  : Event rate criterion (Kim et al. BMVC 2014)
-measurement_criterion = 'event_rate'
+measurement_criterion = 'contrast'
 
 
 ## ___Dataset___
@@ -321,7 +321,7 @@ while True:
 
     iBatch = iBatch + 1
 
-    if False: #iBatch % num_batches_display == 0:
+    if plot_events_animation or plot_events_pm_animation:
         print("Update display: Event # {}".format(iEv))
         idx_pos = pol_events_batch > 0
         idx_neg = pol_events_batch < 0
@@ -347,8 +347,8 @@ while True:
                 ax_events_raw = fig_events_raw.add_subplot(111)
                 events_p, = ax_events_raw.plot(events_batch_pos['x'], events_batch_pos['y'], ',b')
                 events_n, = ax_events_raw.plot(events_batch_neg['x'], events_batch_neg['y'], ',r')
-                plt.xlim([0, 128])
-                plt.ylim([0, 128])
+                plt.xlim([0, dvs_parameters['sensor_width']])
+                plt.ylim([0, dvs_parameters['sensor_height']])
                 plt.title("Events on Sensor")
 
                 plt.ion()
@@ -413,7 +413,6 @@ print("Elapsed time: {} seconds".format(endtime-time_0))
 
 
 #Display in separate figure
-
 print("Total summed Events # {}".format(iEv))
 idx_pos = pol_events_batch > 0
 idx_neg = pol_events_batch < 0
