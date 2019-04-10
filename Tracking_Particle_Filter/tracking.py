@@ -37,6 +37,23 @@ def event_to_3d(x, t, u, v, p):
 N=5            #amount of particles 
 
 #initialize N particles
+
+def generate_3d():
+    """Generate a 3D random rotation matrix.
+    Returns:
+        np.matrix: A 3D rotation matrix. From qobilidop randrot
+    """
+    x1, x2, x3 = np.random.rand(3)
+    R = np.matrix([[np.cos(2 * np.pi * x1), np.sin(2 * np.pi * x1), 0],
+                   [-np.sin(2 * np.pi * x1), np.cos(2 * np.pi * x1), 0],
+                   [0, 0, 1]])
+    v = np.matrix([[np.cos(2 * np.pi * x2) * np.sqrt(x3)],
+                   [np.sin(2 * np.pi * x2) * np.sqrt(x3)],
+                   [np.sqrt(1 - x3)]])
+    H = np.eye(3) - 2 * v * v.T
+    M = -H * R
+    return M
+
 def init_particles(N):
     '''
     in: # particles N
@@ -47,7 +64,7 @@ def init_particles(N):
     w = []
     w0=1/N
     for i in range(N):
-        p.append(p0)
+        p.append(generate_3d())
         w.append(w0)
     return(p,w)
 
