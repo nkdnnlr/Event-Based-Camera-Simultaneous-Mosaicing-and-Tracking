@@ -65,6 +65,7 @@ def init_particles(N):
     w0=1/N
     for i in range(N):
         p.append(generate_3d())
+
         w.append(w0)
     return(p,w)
 
