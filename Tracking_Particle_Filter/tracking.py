@@ -4,6 +4,7 @@ import scipy.linalg as sp
 
 firstevents=np.array([[0, 1249173, 108, 112, 1],
                      [0, 1259493, 109, 109, 1]])
+N=5
 
 def camera_intrinsics():
 
@@ -34,37 +35,34 @@ def event_to_3d(x, t, u, v, p):
 ### PARTICLE FILTER ###
 
 # define global variables:
-N=5            #amount of particles 
+         #amount of particles
+
+def generate_random():
+    G1 = np.matrix([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
+    G2 = np.matrix([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
+    G3 = np.matrix([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+
+    n1 = np.random.uniform(0.0, 2*np.pi)
+    n2 = np.random.uniform(0.0, 2*np.pi)
+    n3 = np.random.uniform(0.0, 2*np.pi)
+
+    M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
+
+    return M
 
 #initialize N particles
-
-def generate_3d():
-    """Generate a 3D random rotation matrix.
-    Returns:
-        np.matrix: A 3D rotation matrix. From qobilidop randrot
-    """
-    x1, x2, x3 = np.random.rand(3)
-    R = np.matrix([[np.cos(2 * np.pi * x1), np.sin(2 * np.pi * x1), 0],
-                   [-np.sin(2 * np.pi * x1), np.cos(2 * np.pi * x1), 0],
-                   [0, 0, 1]])
-    v = np.matrix([[np.cos(2 * np.pi * x2) * np.sqrt(x3)],
-                   [np.sin(2 * np.pi * x2) * np.sqrt(x3)],
-                   [np.sqrt(1 - x3)]])
-    H = np.eye(3) - 2 * v * v.T
-    M = -H * R
-    return M
 
 def init_particles(N):
     '''
     in: # particles N
     out: location of N particles in rotational frame
     '''
-    p0 = np.matrix([[1,0,0],[0,1 ,0],[0,0,1]])      #initial rotation matrix of particles
+    # p0 = np.eye(3)      #initial rotation matrix of particles
     p = []
     w = []
     w0=1/N
     for i in range(N):
-        p.append(generate_3d())
+        p.append(generate_random())
 
         w.append(w0)
     return(p,w)

@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Event-Based-Camera-Simultaneous-Mosaicing-and-Tracking.iml" filepath="$PROJECT_DIR$/.idea/Event-Based-Camera-Simultaneous-Mosaicing-and-Tracking.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../Intro to Machine Learning/Tasks/IntroML19_Task2/.idea/IntroML19_Task2.iml" filepath="$PROJECT_DIR$/../../Intro to Machine Learning/Tasks/IntroML19_Task2/.idea/IntroML19_Task2.iml" />
     </modules>
   </component>
 </project>
