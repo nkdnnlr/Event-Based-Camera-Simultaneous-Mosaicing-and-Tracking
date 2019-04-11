@@ -33,6 +33,7 @@ import sample.coordinate_transforms as coordinate_transforms
 ## Run settings:
 num_events_batch = 300
 num_events_display = 6000
+scale_res = 1 # Use Zweierpotenz
 plot_events_animation = False
 plot_events_pm_animation = False
 
@@ -70,7 +71,7 @@ dvs_parameters = {'sensor_height': 128, 'sensor_width': 128, 'contrast_threshold
 ## ___Main algorithmic parameters___
 
 # Size of the output reconstructed image mosaic (panorama)
-output_height = 1024
+output_height = int(1024/scale_res)
 output_width = 2 * output_height
 
 
@@ -464,6 +465,8 @@ plt.show()
 # g_grad_unit = g_grad/1.
 # g_grad_unit[g_grad_unit > 1.0] = 1.0
 # g_ang_unit = g_ang/360. + 0.5
+
+np.save("intensity_map.npy", rec_image)
 
 
 
