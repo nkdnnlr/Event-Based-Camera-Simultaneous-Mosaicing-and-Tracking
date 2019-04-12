@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
+import scipy.linalg as sp
 
 firstevents=np.array([[0, 1249173, 108, 112, 1],
                      [0, 1259493, 109, 109, 1]])
+N=5
 
 def camera_intrinsics():
 
@@ -42,33 +44,46 @@ def angle2map(theta, phi, height=1024, width=2048):
 
     pass
 
-
-
 ### PARTICLE FILTER ###
 
 # define global variables:
-N=5            #amount of particles 
+         #amount of particles
+
+def generate_random():
+    G1 = np.matrix([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
+    G2 = np.matrix([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
+    G3 = np.matrix([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+
+    n1 = np.random.uniform(0.0, 2*np.pi)
+    n2 = np.random.uniform(0.0, 2*np.pi)
+    n3 = np.random.uniform(0.0, 2*np.pi)
+
+    M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
+
+    return M
 
 #initialize N particles
+
 def init_particles(N):
     '''
     in: # particles N
     out: location of N particles in rotational frame
     '''
-    p0 = np.matrix([[1,0,0],[0,1 ,0],[0,0,1]])      #initial rotation matrix of particles
+    # p0 = np.eye(3)      #initial rotation matrix of particles
     p = []
     w = []
     w0=1/N
     for i in range(N):
-        p.append(p0)
+        p.append(generate_random())
+
         w.append(w0)
     return(p,w)
 
 #state update step
 [p,w]=init_particles(N)
 
-tau=firstevents[1][1]-firstevents[0][1]        #time between events
-tau_c=2000      #time between events in same pixel
+tau=firstevents[1][1]-firstevents[0][1]         #time between events
+tau_c=2000                                      #time between events in same pixel
 
 def update_step(p):
     '''
@@ -83,19 +98,14 @@ def update_step(p):
     for i in range(N):
         n1=np.random.normal(0.0,sigma**2 * tau)
         n2=np.random.normal(0.0,sigma**2 * tau)
-        n3=np.random.normal(0.0,sigma**2 * tau)        
-        
-        p_u.append(np.dot( p[i] , np.exp(np.dot(n1,G1) + np.dot(n2,G2) + np.dot(n3,G3))))
+        n3=np.random.normal(0.0,sigma**2 * tau)
+        p_u.append(np.dot( p[i] , sp.expm(np.dot(n1,G1) + np.dot(n2,G2) + np.dot(n3,G3))))
     return(p_u)
 
-print(update_step(p)[1])
-
-#measurement step
 
 
 def measurement_update(event, particle_rm_t, particle_rm_t_minus_tc,  weigths):
     """
-
     :param event: 0, time, x ,y , a bunch of things
     :param particle_rm: particle rotation matrix
     :param weigths: integer weight
