@@ -10,10 +10,10 @@ def camera_intrinsics():
     in: -
     out: Camera intrinsic Matrix K
     '''
-    f_x=115.534
-    s=0
+    f_x=115.534  # x-focal length
+    s=0 # Skewness
     x_0=79.262
-    f_y=115.565
+    f_y=115.565  # y-focal length
     y_0=65.531
     
     K=np.array([[f_x,s,x_0],[0,f_y,y_0],[0,0,1]])
@@ -30,6 +30,17 @@ def event_to_3d(x, t, u, v, p):
                   ])                                                                                #from world reference frame to rotational frame (theta, phi)
     return p_m
 
+def angle2map(theta, phi, height=1024, width=2048):
+    """
+
+    :param theta:
+    :param phi:
+    :param height:
+    :param width:
+    :return:
+    """
+
+    pass
 
 
 
