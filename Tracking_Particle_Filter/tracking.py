@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import scipy.linalg as sp
+import math
 
 firstevents=np.array([[0, 1249173, 108, 112, 1],
                      [0, 1259493, 109, 109, 1]])
@@ -34,15 +35,17 @@ def event_to_3d(x, t, u, v, p):
 
 def angle2map(theta, phi, height=1024, width=2048):
     """
-
+    Converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
+    to integer map points (pixel coordinates)
     :param theta:
     :param phi:
-    :param height:
-    :param width:
+    :param height: height of image in pixels
+    :param width: width of image in pixels
     :return:
     """
-
-    pass
+    y = np.floor((-1*phi+np.pi/2)/np.pi*height)
+    x = np.floor((theta + np.pi)/(2*np.pi)*width)
+    return y, x
 
 ### PARTICLE FILTER ###
 
