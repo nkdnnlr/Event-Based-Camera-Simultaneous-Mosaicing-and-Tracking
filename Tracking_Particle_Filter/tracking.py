@@ -5,7 +5,7 @@ import math
 
 
 
-intensity_map = np.load("./output/intensity_map.npy")
+intensity_map = np.load("../output/intensity_map.npy")
 
 firstevents=np.array([[0, 1249173, 108, 112, 1],
                      [0, 1259493, 109, 109, 1]])
@@ -26,18 +26,21 @@ def camera_intrinsics():
     K=np.array([[f_x,s,x_0],[0,f_y,y_0],[0,0,1]])
     return K
 
-def event_to_3d(x, t, u, v, p):
+def event2angles(u, v, p):
     '''
-    in: event in camera frame (u,v)
+    in: event in camera frame (u,v), dataframe p generates a dataframe for all particles for 1 event
     out: event in rotational frame (theta,phi)
-    '''   
-    p_w=np.dot(np.dot(R_wc,np.linalg.inv(camera_intrinsics())),np.array([[u],[v],[1]]))             #from camera frame (u,v) to world reference frame
+    '''
+    df = pd.DataFrame(columns=['theta', 'phi'])
+
+
+    p_w=np.dot(np.dot(p,np.linalg.inv(camera_intrinsics())),np.array([[u],[v],[1]]))             #from camera frame (u,v) to world reference frame
     p_m=np.array([np.arctan(np.divide(p_w[0],p_w[2])),
                   np.arctan( np.divide(p_w[1], np.sqrt( np.square(p_w[1])+np.square(p_w[2]) ) ) )
                   ])                                                                                #from world reference frame to rotational frame (theta, phi)
     return p_m
 
-def angle2map(theta, phi, height=1024, width=2048):
+def angles2map(theta, phi, height=1024, width=2048):
     """
     Converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
     to integer map points (pixel coordinates)
@@ -72,22 +75,22 @@ def generate_random():
 #initialize N particles
 
 def init_particles(N):
+
     '''
     in: # particles N
-    out: location of N particles in rotational frame
+    out: data frame with Index, Rotation matrix and weight
     '''
     # p0 = np.eye(3)      #initial rotation matrix of particles
-    p = []
-    w = []
+    df = pd.DataFrame(columns=['Index', 'Rotation', 'Weight'])
+    df['Rotation'] = df['Rotation'].astype(object)
     w0=1/N
     for i in range(N):
-        p.append(generate_random())
+        df.at[i, ['Index']] = int(i)
+        df.at[i, ['Rotation']] = [generate_random()]
+        df.at[i, ['Weight']] = int(w0)
 
-        w.append(w0)
-    return(p,w)
+    return df
 
-#state update step
-[p,w]=init_particles(N)
 
 tau=firstevents[1][1]-firstevents[0][1]         #time between events
 tau_c=2000                                      #time between events in same pixel
@@ -152,3 +155,6 @@ def load_events(filename):
 
 if __name__ == '__main__':
     events = load_events('../data/synth1/events.txt')
+
+    # state update step
+    particles= init_particles(N)
