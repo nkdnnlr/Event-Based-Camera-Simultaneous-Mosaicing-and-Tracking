@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import scipy.linalg as sp
 import math
-
+import sys
 
 
 intensity_map = np.load("../output/intensity_map.npy")
@@ -28,18 +28,27 @@ def camera_intrinsics():
     K=np.array([[f_x,s,x_0],[0,f_y,y_0],[0,0,1]])
     return K
 
-def event2angles(u, v, p):
+def event2angles(u, v, df_rotationmatrices, camera_intrinsicsK):
     '''
     in: event in camera frame (u,v), dataframe p generates a dataframe for all particles for 1 event
     out: event in rotational frame (theta,phi)
     '''
-    df = pd.DataFrame(columns=['theta', 'phi'])
 
 
-    p_w=np.dot(np.dot(p,np.linalg.inv(camera_intrinsics())),np.array([[u],[v],[1]]))             #from camera frame (u,v) to world reference frame
-    p_m=np.array([np.arctan(np.divide(p_w[0],p_w[2])),
-                  np.arctan( np.divide(p_w[1], np.sqrt( np.square(p_w[1])+np.square(p_w[2]) ) ) )
-                  ])                                                                                #from world reference frame to rotational frame (theta, phi)
+    df_coordinates = pd.DataFrame(columns = ['r_w1', 'r_w2', 'r_w3'])
+    event_times_K = np.dot(np.linalg.inv(camera_intrinsicsK),np.array([[u],[v],[1]])) #from camera frame (u,v) to world reference frame
+    p_w_temp = np.dot([df_rotationmatrices], event_times_K)
+
+    df_rotationmatrices
+    print(p_w_temp[:][0])
+    exit()
+    df_coordinates['r_w1'] = p_w_temp[:, 0]
+    df_coordinates['r_w2'] = p_w_temp[:, 1]
+    df_coordinates['r_w3'] = p_w_temp[:, 2]
+    p_m = np.array([np.arctan(np.divide(df_coordinates['r_w1'], df_coordinates['r_w3'])),
+                  np.arctan(np.divide(df_coordinates['r_w2'], np.sqrt(np.square(df_coordinates['r_w2']) + np.square(df_coordinates['r_w3']))))
+                  ])          #from world reference frame to rotational frame (theta, phi)
+
     return p_m
 
 def angles2map(theta, phi, height=1024, width=2048):
@@ -88,7 +97,7 @@ def init_particles(N):
     for i in range(N):
         df.at[i, ['Index']] = int(i)
         df.at[i, ['Rotation']] = [generate_random()]
-        df.at[i, ['Weight']] = int(w0)
+        df.at[i, ['Weight']] = float(w0)
 
     return df
 
@@ -207,33 +216,36 @@ if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
 
-    pixelmap = initialize_pixelmap(128, 128)
-    starttime = time.time()
-    i = 0
-    for idx, event in events.iterrows():
-        # print(event)
-        update_pixelmap(pixelmap=pixelmap, event=event)
-        # i += 1
-        # if i >= 10:
-        #     break
-    endtime = time.time() - starttime
-    print("Endtime: ", endtime)
-
-    ## Testing pixelmap
-    # event = events.loc[557]
-    # print(event)
-    # pixelmap_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # pixelmap_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # pixelmap_ttc = np.array([pixelmap_t, pixelmap_tc])
-    # print(pixelmap_ttc)
-    # update_pixelmap(pixelmap_ttc, event)
-    # print(pixelmap_ttc)
+    # pixelmap = initialize_pixelmap(128, 128)
+    # starttime = time.time()
+    # i = 0
+    # for idx, event in events.iterrows():
+    #     # print(event)
+    #     update_pixelmap(pixelmap=pixelmap, event=event)
+    #     # i += 1
+    #     # if i >= 10:
+    #     #     break
+    # endtime = time.time() - starttime
+    # print("Endtime: ", endtime)
     #
-    # # print(pixelmap[1])
-    # print(pixelmap_ttc[1][0,0])
+    # ## Testing pixelmap
+    # # event = events.loc[557]
+    # # print(event)
+    # # pixelmap_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # # pixelmap_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # # pixelmap_ttc = np.array([pixelmap_t, pixelmap_tc])
+    # # print(pixelmap_ttc)
+    # # update_pixelmap(pixelmap_ttc, event)
+    # # print(pixelmap_ttc)
+    # #
+    # # # print(pixelmap[1])
+    # # print(pixelmap_ttc[1][0,0])
+    # #
+    # #
     #
     #
-
-
-    # state update step
+    # # state update step
+    camera_intrinsicsK = camera_intrinsics()
     particles= init_particles(N)
+    test = event2angles(events['x'][0], events['y'][0], particles['Rotation'], camera_intrinsicsK)
+    print(test)
