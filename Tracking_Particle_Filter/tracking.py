@@ -11,7 +11,10 @@ intensity_map = np.load("../output/intensity_map.npy")
 
 firstevents=np.array([[0, 1249173, 108, 112, 1],
                      [0, 1259493, 109, 109, 1]])
-N=5
+
+num_particles = 5
+num_events_batch = 300
+
 
 def camera_intrinsics():
 
@@ -74,11 +77,11 @@ def generate_random():
 
     return M
 
-#initialize N particles
+#initialize num_particles particles
 
 def init_particles(N):
     '''
-    in: # particles N
+    in: # particles num_particles
     out: data frame with Index, Rotation matrix and weight
     '''
     # p0 = np.eye(3)      #initial rotation matrix of particles
@@ -106,7 +109,7 @@ def update_step(p):
     G3 = np.matrix([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
     sigma=0.0002
     p_u=[]
-    for i in range(N):
+    for i in range(num_particles):
         n1=np.random.normal(0.0,sigma**2 * tau)
         n2=np.random.normal(0.0,sigma**2 * tau)
         n3=np.random.normal(0.0,sigma**2 * tau)
@@ -208,16 +211,16 @@ if __name__ == '__main__':
     events = load_events('../data/synth1/events.txt')
 
     pixelmap = initialize_pixelmap(128, 128)
-    starttime = time.time()
-    i = 0
-    for idx, event in events.iterrows():
-        # print(event)
-        update_pixelmap(pixelmap=pixelmap, event=event)
-        # i += 1
-        # if i >= 10:
-        #     break
-    endtime = time.time() - starttime
-    print("Endtime: ", endtime)
+    # starttime = time.time()
+    # i = 0
+    # for idx, event in events.iterrows():
+    #     # print(event)
+    #     update_pixelmap(pixelmap=pixelmap, event=event)
+    #     # i += 1
+    #     # if i >= 10:
+    #     #     break
+    # endtime = time.time() - starttime
+    # print("Endtime: ", endtime)
 
     ## Testing pixelmap
     # event = events.loc[557]
@@ -236,4 +239,4 @@ if __name__ == '__main__':
 
 
     # state update step
-    particles= init_particles(N)
+    particles= init_particles(num_particles)
