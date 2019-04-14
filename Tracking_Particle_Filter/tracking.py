@@ -1,3 +1,5 @@
+import time as time
+
 import numpy as np
 import pandas as pd
 import scipy.linalg as sp
@@ -145,6 +147,82 @@ def load_events(filename):
     events = events[['t', 'x', 'y', 'pol']]
     print("Head: \n", events.head(10))
     print("Tail: \n", events.tail(10))
+    # print(events['0])
+    return events
+
+
+def initialize_pixelmap(sensor_height, sensor_width):
+    """
+    Initializes pixelmap, which is a
+    tensor of size sensorwidth*sensorheight*2,
+    with tuple (t,pol) as entries
+    :param sensor_height:
+    :param sensor_width:
+    :return:
+    """
+    pixelmap_t = np.zeros((sensor_height, sensor_width),
+                          dtype=[('time', 'f8'), ('polarity', 'i4')])
+    pixelmap_tc = np.zeros((sensor_height, sensor_width),
+                           dtype=[('time', 'f8'), ('polarity', 'i4')])
+    pixelmap = np.array([pixelmap_t, pixelmap_tc])
+    return pixelmap
+
+
+def update_pixelmap(pixelmap, event):
+    """
+    Updates pixelmap for each event. Saves event at t and t-t_c
+    Runtime: ~200seconds for all events
+    :param pixelmap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
+    :param event: Pandas Series with ['t', 'x', 'y', 'pol']
+    :return:
+    """
+    x = int(event['x'])
+    y = int(event['y'])
+    pixelmap[1][y, x] = pixelmap[0][y, x]
+    pixelmap[0][y, x] = (event['t'], event['pol'])
+    return
+
+def update_pixelmap_from_batch(pixelmap, batch_event):
+    """
+    Updates pixelmap for each event. Saves event at t and t-t_c
+    :param pixelmap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
+    :param event: Pandas DataFrame with ['t', 'x', 'y', 'pol']
+    :return:
+    """
+    for event in batch_event:
+        x = int(event['x'])
+        y = int(event['y'])
+        pixelmap[1][y, x] = pixelmap[0][y, x]
+        pixelmap[0][y, x] = (event['t'], event['pol'])
+    return
+
 
 if __name__ == '__main__':
     events = load_events('../data/synth1/events.txt')
+
+    pixelmap = initialize_pixelmap(128, 128)
+    starttime = time.time()
+    i = 0
+    for idx, event in events.iterrows():
+        # print(event)
+        update_pixelmap(pixelmap=pixelmap, event=event)
+        # i += 1
+        # if i >= 10:
+        #     break
+    endtime = time.time() - starttime
+    print("Endtime: ", endtime)
+
+    ## Testing pixelmap
+    # event = events.loc[557]
+    # print(event)
+    # pixelmap_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # pixelmap_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # pixelmap_ttc = np.array([pixelmap_t, pixelmap_tc])
+    # print(pixelmap_ttc)
+    # update_pixelmap(pixelmap_ttc, event)
+    # print(pixelmap_ttc)
+    #
+    # # print(pixelmap[1])
+    # print(pixelmap_ttc[1][0,0])
+    #
+    #
