@@ -3,6 +3,10 @@ import pandas as pd
 import scipy.linalg as sp
 import math
 
+
+
+intensity_map = np.load("./output/intensity_map.npy")
+
 firstevents=np.array([[0, 1249173, 108, 112, 1],
                      [0, 1259493, 109, 109, 1]])
 N=5
