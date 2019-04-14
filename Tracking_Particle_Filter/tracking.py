@@ -129,3 +129,22 @@ def measurement_update(event, particle_rm_t, particle_rm_t_minus_tc,  weigths):
 
         # pm12 = [pm1t, pm2t]
 
+
+def load_events(filename):
+    print("Loading Events")
+    # Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
+    events = pd.read_csv(filename, delimiter=' ', header=None, names=['sec', 'nsec', 'x', 'y', 'pol'])
+    # print("Head: \n", events.head(10))
+    num_events = events.size
+    print("Number of events in file: ", num_events)
+
+    # Remove time of offset
+    first_event_sec = events.loc[0, 'sec']
+    first_event_nsec = events.loc[0, 'nsec']
+    events['t'] = events['sec'] - first_event_sec + 1e-9 * (events['nsec'] - first_event_nsec)
+    events = events[['t', 'x', 'y', 'pol']]
+    print("Head: \n", events.head(10))
+    print("Tail: \n", events.tail(10))
+
+if __name__ == '__main__':
+    events = load_events('../data/synth1/events.txt')
