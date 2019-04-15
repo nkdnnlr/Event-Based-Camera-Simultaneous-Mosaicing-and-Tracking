@@ -20,7 +20,9 @@ num_particles = 500
 num_events_batch = 300
 tau=firstevents[1][1]-firstevents[0][1]         #time between events
 # tau_c=2000                                      #time between events in same pixel
-
+mu = 0.22
+sigma = 8.0*10**(-2)
+minimum_constant = 1e-3
 
 def camera_intrinsics():
 
@@ -215,6 +217,7 @@ def update_pixelmap(pixelmap, event):
     pixelmap[0][y, x] = (event['t'], event['pol'])
     return
 
+
 def update_pixelmap_from_batch(pixelmap, batch_event):
     """
     Updates pixelmap for each event. Saves event at t and t-t_c
@@ -228,6 +231,21 @@ def update_pixelmap_from_batch(pixelmap, batch_event):
         pixelmap[1][y, x] = pixelmap[0][y, x]
         pixelmap[0][y, x] = (event['t'], event['pol'])
     return
+
+
+def event_likelihood(z, mu, sigma, k_e):
+    """
+    For a given absolute log intensity difference z,
+    returns the likelihood of an event.
+    likelihood = normalize(gaussian distribution + noise)
+    :param z: log intensity difference
+    :param mu: mean
+    :param sigma: standard deviation
+    :param k_e: minimum constant / noise
+    :return:
+    """
+    y = k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(z - mu) ** 2 / (2 * sigma) ** 2)
+    return y/np.max(y)
 
 
 if __name__ == '__main__':
