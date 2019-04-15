@@ -14,6 +14,9 @@ firstevents=np.array([[0, 1249173, 108, 112, 1],
 
 num_particles = 5
 num_events_batch = 300
+tau=firstevents[1][1]-firstevents[0][1]         #time between events
+tau_c=2000                                      #time between events in same pixel
+
 
 
 def camera_intrinsics():
@@ -31,29 +34,33 @@ def camera_intrinsics():
     K=np.array([[f_x,s,x_0],[0,f_y,y_0],[0,0,1]])
     return K
 
-def event2angles(u, v, df_rotationmatrices, camera_intrinsicsK):
-    '''
-    in: event in camera frame (u,v), dataframe p generates a dataframe for all particles for 1 event
-    out: event in rotational frame (theta,phi)
-    '''
-    df = pd.DataFrame(columns=['theta', 'phi'])
+def event2angles(event, df_rotationmatrices, calibration):
+    """
+    event in camera frame (u,v), dataframe p generates a dataframe for all particles for 1 event
+    :param u:
+    :param v:
+    :param df_rotationmatrices:
+    :param calibration:
+    :return:
+    """
+    u = event['x']
+    v = event['y']
+    event_times_K = np.dot(np.linalg.inv(calibration), np.array([[u], [v], [1]])) #from camera frame (u,v) to world reference frame
 
+    # df_rotationmatrices
+    coordinates = ['r_w1', 'r_w2', 'r_w3']
+    df_coordinates = pd.DataFrame.from_records(df_rotationmatrices.apply(lambda x: np.dot(x, event_times_K)),
+                                               columns=coordinates)
+    df_coordinates['r_w1'] = df_coordinates['r_w1'].str.get(0)
+    df_coordinates['r_w2'] = df_coordinates['r_w2'].str.get(0)
+    df_coordinates['r_w3'] = df_coordinates['r_w3'].str.get(0)
 
-    df_coordinates = pd.DataFrame(columns = ['r_w1', 'r_w2', 'r_w3'])
-    event_times_K = np.dot(np.linalg.inv(camera_intrinsicsK),np.array([[u],[v],[1]])) #from camera frame (u,v) to world reference frame
-    p_w_temp = np.dot([df_rotationmatrices], event_times_K)
+    # from world reference frame to rotational frame (theta, phi)
+    df_angles = pd.DataFrame(columns=['theta', 'phi'])
+    df_angles['theta'] = np.arctan(df_coordinates['r_w1'] / df_coordinates['r_w3'])
+    df_angles['phi'] =  np.arctan(df_coordinates['r_w2'] / np.sqrt(df_coordinates['r_w2']**2 + df_coordinates['r_w3']**2))
 
-    df_rotationmatrices
-    print(p_w_temp[:][0])
-    exit()
-    df_coordinates['r_w1'] = p_w_temp[:, 0]
-    df_coordinates['r_w2'] = p_w_temp[:, 1]
-    df_coordinates['r_w3'] = p_w_temp[:, 2]
-    p_m = np.array([np.arctan(np.divide(df_coordinates['r_w1'], df_coordinates['r_w3'])),
-                  np.arctan(np.divide(df_coordinates['r_w2'], np.sqrt(np.square(df_coordinates['r_w2']) + np.square(df_coordinates['r_w3']))))
-                  ])          #from world reference frame to rotational frame (theta, phi)
-
-    return p_m
+    return df_angles
 
 def angles2map(theta, phi, height=1024, width=2048):
     """
@@ -95,19 +102,14 @@ def init_particles(N):
     out: data frame with Index, Rotation matrix and weight
     '''
     # p0 = np.eye(3)      #initial rotation matrix of particles
-    df = pd.DataFrame(columns=['Index', 'Rotation', 'Weight'])
+    df = pd.DataFrame(columns=['Rotation', 'Weight'])
     df['Rotation'] = df['Rotation'].astype(object)
-    w0=1/N
+    w0 = 1/N
     for i in range(N):
-        df.at[i, ['Index']] = int(i)
         df.at[i, ['Rotation']] = [generate_random()]
         df.at[i, ['Weight']] = float(w0)
-
     return df
 
-
-tau=firstevents[1][1]-firstevents[0][1]         #time between events
-tau_c=2000                                      #time between events in same pixel
 
 def update_step(p):
     '''
@@ -124,8 +126,7 @@ def update_step(p):
         n2=np.random.normal(0.0,sigma**2 * tau)
         n3=np.random.normal(0.0,sigma**2 * tau)
         p_u.append(np.dot( p[i] , sp.expm(np.dot(n1,G1) + np.dot(n2,G2) + np.dot(n3,G3))))
-    return(p_u)
-
+    return p_u
 
 
 def measurement_update(event, particle_rm_t, particle_rm_t_minus_tc,  weigths):
@@ -258,8 +259,11 @@ if __name__ == '__main__':
     # #
     #
     #
+    #
     # # state update step
     camera_intrinsicsK = camera_intrinsics()
     particles= init_particles(num_particles)
-    test = event2angles(events['x'][0], events['y'][0], particles['Rotation'], camera_intrinsicsK)
+    print(particles)
+    test = event2angles(events.loc[0], particles['Rotation'], camera_intrinsicsK)
+    # print(events.loc[0])
     print(test)
