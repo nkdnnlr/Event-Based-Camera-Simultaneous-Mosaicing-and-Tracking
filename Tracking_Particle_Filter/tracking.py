@@ -61,6 +61,7 @@ def event2angles(event, df_rotationmatrices, calibration):
 
     return df_angles
 
+
 def angles2map(theta, phi, height=1024, width=2048):
     """
     Converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
@@ -76,6 +77,18 @@ def angles2map(theta, phi, height=1024, width=2048):
     return y, x
 
 
+def particles_per_event2map(event, particles, calibration):
+    """
+    For each event, gets map angles and coordinates (for on panoramic image)
+    :param event:
+    :param particles:
+    :param calibration:
+    :return:
+    """
+    particles_per_event = event2angles(event, particles['Rotation'], calibration)
+    particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
+        lambda row: angles2map(row['theta'], row['phi']), axis=1))
+    return particles_per_event
 
 
 ### PARTICLE FILTER ###
@@ -110,6 +123,7 @@ def init_particles(N):
     '''
     in: # particles num_particles
     out: data frame with Index, Rotation matrix and weight
+    TODO: Add time to particle. For example, make particles every 1/1000 s. We will need to save particles somewhere.
     '''
     # p0 = np.eye(3)      #initial rotation matrix of particles
     df = pd.DataFrame(columns=['Rotation', 'Weight'])
@@ -154,6 +168,30 @@ def get_latest_particles(t_asked, particles_all_time):
     dt_pos_inv = 1. / dt_pos
     t_particles = math.floor(t_asked * dt_pos_inv) / dt_pos
     return particles_all_time[particles_all_time['t'] == t_particles]
+
+
+def get_pixelmap_for_particles(event, sensormap, particles_all_time):
+    """
+    Working on...
+    :param event:
+    :param sensormap:
+    :param particles_all_time:
+    :return:
+    """
+    t = event['t']
+    x = event['x']
+    y = event['y']
+    ttc = sensormap[1][x,y][0]
+
+    particles = get_latest_particles(t_asked=t, particles_all_time=particles_all_time)
+
+    particles_ttc = get_latest_particles(t_asked=ttc, particles_all_time=particles_all_time)
+
+    particles_per_event2map(event, particles, camera_intrinsicsK)
+
+    pass
+
+
 
 
 def measurement_update_temp(event, particle, pixelmap):
@@ -292,6 +330,8 @@ if __name__ == '__main__':
         #     break
     endtime = time.time() - starttime
     print("Endtime: ", endtime)
+    print(sensormap[0][0,0][0])
+    exit()
 
     ## Testing sensormap
     # event = events.loc[557]
@@ -324,9 +364,10 @@ if __name__ == '__main__':
     camera_intrinsicsK = camera_intrinsics()
     particles= init_particles(num_particles)
     print(particles)
-    particles_per_event = event2angles(events.loc[0], particles['Rotation'], camera_intrinsicsK)
-    particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
-        lambda row: angles2map(row['theta'], row['phi']), axis=1))
+    # particles_per_event = event2angles(events.loc[0], particles['Rotation'], camera_intrinsicsK)
+    # particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
+    #     lambda row: angles2map(row['theta'], row['phi']), axis=1))
+    particles_per_event = particles_per_event2map(events.loc[0], particles, camera_intrinsicsK)
     print(particles_per_event)
     plt.figure(1)
     plt.scatter(particles_per_event['theta'], particles_per_event['phi'])
