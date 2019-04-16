@@ -5,6 +5,7 @@ import pandas as pd
 import scipy.linalg as sp
 import math
 import sys
+import matplotlib.pyplot as plt
 
 
 intensity_map = np.load("../output/intensity_map.npy")
@@ -41,7 +42,6 @@ def event2angles(u, v, df_rotationmatrices, camera_intrinsicsK):
 
     df_rotationmatrices
     print(p_w_temp[:][0])
-    exit()
     df_coordinates['r_w1'] = p_w_temp[:, 0]
     df_coordinates['r_w2'] = p_w_temp[:, 1]
     df_coordinates['r_w3'] = p_w_temp[:, 2]
@@ -166,6 +166,12 @@ def load_events(filename):
     return events
 
 
+def mexhat(t, sigma=8.0*10e-2, k_e = 1.0*10e-3, Ce = 0.22):
+
+    c = 2. / math.sqrt(3 * sigma) * (math.pi ** 0.25)
+    return c * (1 - t ** 2 / sigma ** 2) * np.exp(-t ** 2 / (2 * sigma ** 2))
+
+
 def initialize_pixelmap(sensor_height, sensor_width):
     """
     Initializes pixelmap, which is a
@@ -247,5 +253,12 @@ if __name__ == '__main__':
     # # state update step
     camera_intrinsicsK = camera_intrinsics()
     particles= init_particles(N)
-    test = event2angles(events['x'][0], events['y'][0], particles['Rotation'], camera_intrinsicsK)
-    print(test)
+
+    t = []
+    tt = range(1, 100)
+    for i in tt:
+        t.append(mexhat(i))
+
+    plt.plot(tt, t)
+    plt.show()
+
