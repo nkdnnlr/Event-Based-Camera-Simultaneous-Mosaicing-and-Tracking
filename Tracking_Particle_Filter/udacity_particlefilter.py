@@ -115,11 +115,11 @@ def eval(r, p):
 #myrobot = robot()
 #myrobot = myrobot.move(0.1, 5.0)
 #Z = myrobot.sense()
-#N = 1000
+#num_particles = 1000
 #T = 10 #Leave this as 10 for grading purposes.
 #
 #p = []
-#for i in range(N):
+#for i in range(num_particles):
 #    r = robot()
 #    r.set_noise(0.05, 0.05, 5.0)
 #    p.append(r)
@@ -129,23 +129,23 @@ def eval(r, p):
 #    Z = myrobot.sense()
 #
 #    p2 = []
-#    for i in range(N):
+#    for i in range(num_particles):
 #        p2.append(p[i].move(0.1, 5.0))
 #    p = p2
 #
 #    w = []
-#    for i in range(N):
+#    for i in range(num_particles):
 #        w.append(p[i].measurement_prob(Z))
 #
 #    p3 = []
-#    index = int(random.random() * N)
+#    index = int(random.random() * num_particles)
 #    beta = 0.0
 #    mw = max(w)
-#    for i in range(N):
+#    for i in range(num_particles):
 #        beta += random.random() * 2.0 * mw
 #        while beta > w[index]:
 #            beta -= w[index]
-#            index = (index + 1) % N
+#            index = (index + 1) % num_particles
 #        p3.append(p[index])
 #    p = p3
 #    #enter code here, make sure that you output 10 print statements.
@@ -206,7 +206,7 @@ def check_output(final_robot, estimated_position):
 
 
 
-def particle_filter(motions, measurements, N=500): # I know it's tempting, but don't change N!
+def particle_filter(motions, measurements, N=500): # I know it's tempting, but don't change num_particles!
     # --------
     #
     # Make particles
