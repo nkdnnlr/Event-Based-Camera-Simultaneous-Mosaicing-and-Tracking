@@ -7,6 +7,12 @@ import pandas as pd
 import scipy.linalg as sp
 import math
 import sys
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import plotly
+import plotly.plotly as py
+import plotly.graph_objs as go
+plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
 
 
 intensity_map = np.load("../output/intensity_map.npy")
@@ -97,15 +103,73 @@ def generate_random_rotmat(seed = None):
     G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
     G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
 
-    n1 = np.random.uniform(0.0, 2*np.pi)
-    n2 = np.random.uniform(0.0, 2*np.pi)
-    n3 = np.random.uniform(0.0, 2*np.pi)
+    n1 = np.random.uniform(-np.pi, np.pi)
+    n2 = np.random.uniform(-np.pi, np.pi)
+    n3 = np.random.uniform(-np.pi, np.pi)
 
     M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
 
     return M
 
-#initialize num_particles particles
+def test_distributions_rotmat(N=100):
+    """
+
+    :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
+    """
+    listM = []
+    for i in range(1, N):
+        listM.append(generate_random_rotmat())
+    for i in listM:
+        np.dot(listM, [0, 0, 1])
+    vecM = []
+
+    for i in listM:
+        vecM.append(np.dot(listM, [0, 0, 1]))
+    rotX = []
+    rotY = []
+    rotZ = []
+    for i in range(len(vecM)):
+        rotX.append(vecM[i][i][0])
+        rotY.append(vecM[i][i][1])
+        rotZ.append(vecM[i][i][2])
+
+
+
+    trace1 = go.Scatter3d(
+        x=rotX,
+        y=rotY,
+        z=rotZ,
+        mode='markers',
+        marker=dict(
+            size=12,
+            line=dict(
+                color='rgba(217, 217, 217, 0.14)',
+                width=0.5
+            ),
+            opacity=0.8
+        )
+    )
+
+
+    data = [trace1]
+    layout = go.Layout(
+        margin=dict(
+            l=0,
+            r=0,
+            b=0,
+            t=0
+        )
+    )
+    fig = go.Figure(data=data, layout=layout)
+    py.iplot(fig, filename='simple-3d-scatter')
+
+    ax = plt.axes(projection='3d')
+    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
+    ax.scatter3D([0], [0], [1], 'b')
+    plt.show()
+
+
+initialize num_particles particles
 
 def init_particles(N):
     '''
