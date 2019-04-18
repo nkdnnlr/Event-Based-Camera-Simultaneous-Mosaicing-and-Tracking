@@ -13,6 +13,7 @@ import plotly
 import plotly.plotly as py
 import plotly.graph_objs as go
 plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
+import matplotlib.pyplot as plt
 
 
 intensity_map = np.load("../output/intensity_map.npy")
@@ -68,6 +69,7 @@ def event2angles(event, df_rotationmatrices, calibration):
 
     return df_angles
 
+
 def angles2map(theta, phi, height=1024, width=2048):
     """
     Converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
@@ -83,6 +85,18 @@ def angles2map(theta, phi, height=1024, width=2048):
     return y, x
 
 
+def particles_per_event2map(event, particles, calibration):
+    """
+    For each event, gets map angles and coordinates (for on panoramic image)
+    :param event:
+    :param particles:
+    :param calibration:
+    :return:
+    """
+    particles_per_event = event2angles(event, particles['Rotation'], calibration)
+    particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
+        lambda row: angles2map(row['theta'], row['phi']), axis=1))
+    return particles_per_event
 
 
 ### PARTICLE FILTER ###
@@ -175,6 +189,7 @@ def init_particles(N):
     '''
     in: # particles num_particles
     out: data frame with Index, Rotation matrix and weight
+    TODO: Add time to particle. For example, make particles every 1/1000 s. We will need to save particles somewhere.
     '''
     # p0 = np.eye(3)      #initial rotation matrix of particles
     df = pd.DataFrame(columns=['Rotation', 'Weight'])
@@ -205,6 +220,55 @@ def update_step(particle):
         n3 = np.random.normal(0.0, sigma3**2 * tau)
         p_u.append(np.dot(particle[i], sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))))
     return p_u
+
+
+def get_latest_particles(t_asked, particles_all_time):
+    """
+    From list of particles over all times,
+    get set of particles that was just before asked t_asked
+    :param t_asked: t_asked of interest (e.g. t_asked of current event)
+    :param particles_all_time:
+    :return:
+    """
+    dt_pos = 1e-4 #TODO: Write as class variable (also dt_pos_inv)
+    dt_pos_inv = 1. / dt_pos
+    t_particles = math.floor(t_asked * dt_pos_inv) / dt_pos
+    return particles_all_time[particles_all_time['t'] == t_particles]
+
+
+def get_pixelmap_for_particles(event, sensormap, particles_all_time):
+    """
+    Working on...
+    :param event:
+    :param sensormap:
+    :param particles_all_time:
+    :return:
+    """
+    t = event['t']
+    x = event['x']
+    y = event['y']
+    ttc = sensormap[1][x,y][0]
+
+    particles = get_latest_particles(t_asked=t, particles_all_time=particles_all_time)
+
+    particles_ttc = get_latest_particles(t_asked=ttc, particles_all_time=particles_all_time)
+
+    particles_per_event2map(event, particles, camera_intrinsicsK)
+
+    pass
+
+
+
+
+def measurement_update_temp(event, particle, pixelmap):
+    """
+    1. Rotate event with rotation matrix from particle.
+    :param event:
+    :param particle:
+    :param pixelmap:
+    :return:
+    """
+    pass
 
 
 def measurement_update(event, particle_rm_t, particle_rm_t_minus_tc,  weigths):
@@ -255,50 +319,50 @@ def mexhat(t, sigma=8.0*10e-2, k_e = 1.0*10e-3, Ce = 0.22):
     return c * (1 - t ** 2 / sigma ** 2) * np.exp(-t ** 2 / (2 * sigma ** 2))
 
 
-def initialize_pixelmap(sensor_height, sensor_width):
+def initialize_sensormap(sensor_height, sensor_width):
     """
-    Initializes pixelmap, which is a
+    Initializes sensormap, which is a
     tensor of size sensorwidth*sensorheight*2,
     with tuple (t,pol) as entries
     :param sensor_height:
     :param sensor_width:
     :return:
     """
-    pixelmap_t = np.zeros((sensor_height, sensor_width),
+    sensormap_t = np.zeros((sensor_height, sensor_width),
                           dtype=[('time', 'f8'), ('polarity', 'i4')])
-    pixelmap_tc = np.zeros((sensor_height, sensor_width),
+    sensormap_tc = np.zeros((sensor_height, sensor_width),
                            dtype=[('time', 'f8'), ('polarity', 'i4')])
-    pixelmap = np.array([pixelmap_t, pixelmap_tc])
-    return pixelmap
+    sensormap = np.array([sensormap_t, sensormap_tc])
+    return sensormap
 
 
-def update_pixelmap(pixelmap, event):
+def update_sensormap(sensormap, event):
     """
-    Updates pixelmap for each event. Saves event at t and t-t_c
+    Updates sensormap for each event. Saves event at t and t-t_c
     Runtime: ~200seconds for all events
-    :param pixelmap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
+    :param sensormap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
     :param event: Pandas Series with ['t', 'x', 'y', 'pol']
     :return:
     """
     x = int(event['x'])
     y = int(event['y'])
-    pixelmap[1][y, x] = pixelmap[0][y, x]
-    pixelmap[0][y, x] = (event['t'], event['pol'])
+    sensormap[1][y, x] = sensormap[0][y, x]
+    sensormap[0][y, x] = (event['t'], event['pol'])
     return
 
 
-def update_pixelmap_from_batch(pixelmap, batch_event):
+def update_sensormap_from_batch(sensormap, batch_event):
     """
-    Updates pixelmap for each event. Saves event at t and t-t_c
-    :param pixelmap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
+    Updates sensormap for each event. Saves event at t and t-t_c
+    :param sensormap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
     :param event: Pandas DataFrame with ['t', 'x', 'y', 'pol']
     :return:
     """
     for event in batch_event:
         x = int(event['x'])
         y = int(event['y'])
-        pixelmap[1][y, x] = pixelmap[0][y, x]
-        pixelmap[0][y, x] = (event['t'], event['pol'])
+        sensormap[1][y, x] = sensormap[0][y, x]
+        sensormap[0][y, x] = (event['t'], event['pol'])
     return
 
 
@@ -321,40 +385,42 @@ if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
 
-    pixelmap = initialize_pixelmap(128, 128)
-    # starttime = time.time()
-    # i = 0
-    # for idx, event in events.iterrows():
-    #     # print(event)
-    #     update_pixelmap(pixelmap=pixelmap, event=event)
-    #     # i += 1
-    #     # if i >= 10:
-    #     #     break
-    # endtime = time.time() - starttime
-    # print("Endtime: ", endtime)
+    sensormap = initialize_sensormap(128, 128)
+    starttime = time.time()
+    i = 0
+    for idx, event in events.head(50000).iterrows():
+        # print(event)
+        update_sensormap(sensormap=sensormap, event=event)
+        # i += 1
+        # if i >= 10:
+        #     break
+    endtime = time.time() - starttime
+    print("Endtime: ", endtime)
+    print(sensormap[0][0,0][0])
+    exit()
 
-    ## Testing pixelmap
+    ## Testing sensormap
     # event = events.loc[557]
     # print(event)
-    # pixelmap_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # pixelmap_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # pixelmap_ttc = np.array([pixelmap_t, pixelmap_tc])
-    # print(pixelmap_ttc)
-    # update_pixelmap(pixelmap_ttc, event)
-    # print(pixelmap_ttc)
+    # sensormap_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # sensormap_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # sensormap_ttc = np.array([sensormap_t, sensormap_tc])
+    # print(sensormap_ttc)
+    # update_sensormap(sensormap_ttc, event)
+    # print(sensormap_ttc)
     #
-    # ## Testing pixelmap
+    # ## Testing sensormap
     # # event = events.loc[557]
     # # print(event)
-    # # pixelmap_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # # pixelmap_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # # pixelmap_ttc = np.array([pixelmap_t, pixelmap_tc])
-    # # print(pixelmap_ttc)
-    # # update_pixelmap(pixelmap_ttc, event)
-    # # print(pixelmap_ttc)
+    # # sensormap_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # # sensormap_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # # sensormap_ttc = np.array([sensormap_t, sensormap_tc])
+    # # print(sensormap_ttc)
+    # # update_sensormap(sensormap_ttc, event)
+    # # print(sensormap_ttc)
     # #
-    # # # print(pixelmap[1])
-    # # print(pixelmap_ttc[1][0,0])
+    # # # print(sensormap[1])
+    # # print(sensormap_ttc[1][0,0])
     # #
     # #
     #
@@ -364,9 +430,10 @@ if __name__ == '__main__':
     camera_intrinsicsK = camera_intrinsics()
     particles= init_particles(num_particles)
     print(particles)
-    particles_per_event = event2angles(events.loc[0], particles['Rotation'], camera_intrinsicsK)
-    particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
-        lambda row: angles2map(row['theta'], row['phi']), axis=1))
+    # particles_per_event = event2angles(events.loc[0], particles['Rotation'], camera_intrinsicsK)
+    # particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
+    #     lambda row: angles2map(row['theta'], row['phi']), axis=1))
+    particles_per_event = particles_per_event2map(events.loc[0], particles, camera_intrinsicsK)
     print(particles_per_event)
     plt.figure(1)
     plt.scatter(particles_per_event['theta'], particles_per_event['phi'])
@@ -375,14 +442,14 @@ if __name__ == '__main__':
     plt.scatter(particles_per_event['u'], particles_per_event['v'])
     plt.show()
 
-
-    particles= init_particles(N)
-
-    t = []
-    tt = range(1, 100)
-    for i in tt:
-        t.append(mexhat(i))
-
-    plt.plot(tt, t)
-    plt.show()
+    #
+    # # particles= init_particles(N)
+    #
+    # t = []
+    # tt = range(1, 100)
+    # for i in tt:
+    #     t.append(mexhat(i))
+    #
+    # plt.plot(tt, t)
+    # plt.show()
 
