@@ -59,8 +59,8 @@ def event2angles(event, df_rotationmatrices, calibration):
     df_coordinates = pd.DataFrame.from_records(df_rotationmatrices.apply(lambda x: np.dot(x, event_times_K)),
                                                columns=coordinates)
     df_coordinates['r_w1'] = df_coordinates['r_w1'].str.get(0)
-    df_coordinates['r_w2'] = df_coordinates['r_w2'].str.get(0)
-    df_coordinates['r_w3'] = df_coordinates['r_w3'].str.get(0)
+    df_coordinates['r_w2'] = df_coordinates['r_w2'].str.get(1) # TODO: have changed 0 to 1 and 2, it should work like this but i haven't checked yet!
+    df_coordinates['r_w3'] = df_coordinates['r_w3'].str.get(2)
 
     # from world reference frame to rotational frame (theta, phi)
     df_angles = pd.DataFrame(columns=['theta', 'phi'])
@@ -121,33 +121,21 @@ def generate_random_rotmat(seed = None):
     n2 = np.random.uniform(-np.pi, np.pi)
     n3 = np.random.uniform(-np.pi, np.pi)
 
-    M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
+    M = sp.expm(np.dot(0.5, G1) + np.dot(0.5, G2) + np.dot(0.5, G3))
 
     return M
 
-def test_distributions_rotmat(N=100):
+def test_distributions_rotmat(rotation_matrices):
     """
 
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
-    """
-    listM = []
-    for i in range(1, N):
-        listM.append(generate_random_rotmat())
-    for i in listM:
-        np.dot(listM, [0, 0, 1])
-    vecM = []
+    # """
 
-    for i in listM:
-        vecM.append(np.dot(listM, [0, 0, 1]))
-    rotX = []
-    rotY = []
-    rotZ = []
-    for i in range(len(vecM)):
-        rotX.append(vecM[i][i][0])
-        rotY.append(vecM[i][i][1])
-        rotZ.append(vecM[i][i][2])
-
-
+    vec = np.array([1,0,0]).T
+    vecM = rotation_matrices.apply(lambda x: np.dot(x, vec))
+    rotX = vecM.str.get(0)
+    rotY = vecM.str.get(1)
+    rotZ = vecM.str.get(2)
 
     trace1 = go.Scatter3d(
         x=rotX,
@@ -158,7 +146,7 @@ def test_distributions_rotmat(N=100):
             size=12,
             line=dict(
                 color='rgba(217, 217, 217, 0.14)',
-                width=0.5
+                width=0.1
             ),
             opacity=0.8
         )
@@ -179,11 +167,14 @@ def test_distributions_rotmat(N=100):
 
     ax = plt.axes(projection='3d')
     ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
-    ax.scatter3D([0], [0], [1], 'b')
+    ax.scatter3D([1], [0], [0], 'b')
     plt.show()
 
 
-initialize num_particles particles
+
+
+
+##initialize num_particles particles
 
 def init_particles(N):
     '''
@@ -202,24 +193,30 @@ def init_particles(N):
     return df
 
 
-def update_step(particle):
+def motion_update(particles):
     '''
-    in: particles
+    in: particles as data frame with Rotation and Weight
     out: particles, updated
     '''
+    updated_particles = particles.copy()  # type: object
     G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
     G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
     G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+    # TODO: update sigma and tau!!
     sigma1 = 2.3e-8
     sigma2 = 5.0e-6
     sigma3 = 7e-5
-    p_u=[]
-    for i in range(num_particles):
-        n1 = np.random.normal(0.0, sigma1**2 * tau)
-        n2 = np.random.normal(0.0, sigma2**2 * tau)
-        n3 = np.random.normal(0.0, sigma3**2 * tau)
-        p_u.append(np.dot(particle[i], sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))))
-    return p_u
+    # p_u=[]
+    # for i in range(len(particles)):
+        # n1 = np.random.normal(0.0, sigma1**2 * tau)
+        # n2 = np.random.normal(0.0, sigma2**2 * tau)
+        # n3 = np.random.normal(0.0, sigma3**2 * tau)
+        # p_u.append(np.dot(particle[i], sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))))
+    updated_particles['Rotation'] = updated_particles['Rotation'].apply(
+        lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma2* tau), G1)
+                                    + np.dot(np.random.normal(0.0, sigma2*tau), G2)
+                                    + np.dot(np.random.normal(0.0,sigma2* tau), G3))))
+    return updated_particles
 
 
 def get_latest_particles(t_asked, particles_all_time):
@@ -385,19 +382,19 @@ if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
 
-    sensormap = initialize_sensormap(128, 128)
-    starttime = time.time()
-    i = 0
-    for idx, event in events.head(50000).iterrows():
-        # print(event)
-        update_sensormap(sensormap=sensormap, event=event)
-        # i += 1
-        # if i >= 10:
-        #     break
-    endtime = time.time() - starttime
-    print("Endtime: ", endtime)
-    print(sensormap[0][0,0][0])
-    exit()
+    # sensormap = initialize_sensormap(128, 128)
+    # starttime = time.time()
+    # i = 0
+    # for idx, event in events.head(50000).iterrows():
+    #     # print(event)
+    #     update_sensormap(sensormap=sensormap, event=event)
+    #     # i += 1
+    #     # if i >= 10:
+    #     #     break
+    # endtime = time.time() - starttime
+    # print("Endtime: ", endtime)
+    # print(sensormap[0][0,0][0])
+    # exit()
 
     ## Testing sensormap
     # event = events.loc[557]
@@ -427,29 +424,23 @@ if __name__ == '__main__':
     #
     #
     # # state update step
-    camera_intrinsicsK = camera_intrinsics()
+
+    # camera_intrinsicsK = camera_intrinsics()
     particles= init_particles(num_particles)
-    print(particles)
+    # # print(particles)
     # particles_per_event = event2angles(events.loc[0], particles['Rotation'], camera_intrinsicsK)
-    # particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
-    #     lambda row: angles2map(row['theta'], row['phi']), axis=1))
-    particles_per_event = particles_per_event2map(events.loc[0], particles, camera_intrinsicsK)
-    print(particles_per_event)
-    plt.figure(1)
-    plt.scatter(particles_per_event['theta'], particles_per_event['phi'])
-    plt.show()
-    plt.figure(2)
-    plt.scatter(particles_per_event['u'], particles_per_event['v'])
-    plt.show()
+    # # particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
+    # #     lambda row: angles2map(row['theta'], row['phi']), axis=1))
+    # particles_per_event = particles_per_event2map(events.loc[0], particles, camera_intrinsicsK)
+    # # print(particles_per_event)
+    updated_particles = motion_update(particles)
+    # print(updated_particles)
 
-    #
-    # # particles= init_particles(N)
-    #
-    # t = []
-    # tt = range(1, 100)
-    # for i in tt:
-    #     t.append(mexhat(i))
-    #
-    # plt.plot(tt, t)
+    test_distributions_rotmat(updated_particles['Rotation'])
+    # test_distributions_rotmat(updated_particles['Rotation'])
+    # plt.figure(1)
+    # plt.scatter(particles_per_event['theta'], particles_per_event['phi'])
     # plt.show()
-
+    # plt.figure(2)
+    # plt.scatter(particles_per_event['u'], particles_per_event['v'])
+    # plt.show()
