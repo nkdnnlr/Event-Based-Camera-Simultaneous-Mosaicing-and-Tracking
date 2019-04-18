@@ -50,9 +50,9 @@ def event2angles(event, df_rotationmatrices, calibration):
     For a given event, generates dataframe
     with particles as rows and angles as columns.
     :param event: Event in camera frame
-    :param df_rotationmatrices:
-    :param calibration:
-    :return:
+    :param df_rotationmatrices: DataFrame with rotation matrices
+    :param calibration: camera calibration
+    :return: DataFrame with particles as rows and angles as columns.
     """
     event_times_K = np.dot(np.linalg.inv(calibration), np.array([[event['x']], [event['y']], [1]])) #from camera frame (u,v) to world reference frame
     coordinates = ['r_w1', 'r_w2', 'r_w3']
@@ -78,7 +78,7 @@ def angles2map(theta, phi, height=1024, width=2048):
     :param phi:
     :param height: height of image in pixels
     :param width: width of image in pixels
-    :return:
+    :return: tuple with integer map points (pixel coordinates)
     """
     y = np.floor((-1*phi+np.pi/2)/np.pi*height)
     x = np.floor((theta + np.pi)/(2*np.pi)*width)
@@ -88,10 +88,10 @@ def angles2map(theta, phi, height=1024, width=2048):
 def particles_per_event2map(event, particles, calibration):
     """
     For each event, gets map angles and coordinates (for on panoramic image)
-    :param event:
-    :param particles:
+    :param event: one event
+    :param particles: dataframe with particles
     :param calibration:
-    :return:
+    :return:  DataFrame with particles as rows and as columns theta, phi, v, u (coordinates)
     """
     particles_per_event = event2angles(event, particles['Rotation'], calibration)
     particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
@@ -126,10 +126,13 @@ def generate_random_rotmat(seed = None):
     return M
 
 def test_distributions_rotmat(rotation_matrices):
-    """
-
+   """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
-    # """
+
+    Function checks whether the rotation matrices are really randomly distributed.
+    multiplies rot matrix with Z-unit-vector.
+    :return: plotly and matplotlib plot which shows the distribution
+    """
 
     vec = np.array([1,0,0]).T
     vecM = rotation_matrices.apply(lambda x: np.dot(x, vec))
@@ -225,7 +228,7 @@ def get_latest_particles(t_asked, particles_all_time):
     get set of particles that was just before asked t_asked
     :param t_asked: t_asked of interest (e.g. t_asked of current event)
     :param particles_all_time:
-    :return:
+    :return: the particle that came before a time-of-interest.
     """
     dt_pos = 1e-4 #TODO: Write as class variable (also dt_pos_inv)
     dt_pos_inv = 1. / dt_pos
@@ -259,6 +262,7 @@ def get_pixelmap_for_particles(event, sensormap, particles_all_time):
 
 def measurement_update_temp(event, particle, pixelmap):
     """
+    Working on...
     1. Rotate event with rotation matrix from particle.
     :param event:
     :param particle:
@@ -292,6 +296,11 @@ def measurement_update(event, particle_rm_t, particle_rm_t_minus_tc,  weigths):
 
 
 def load_events(filename):
+    """
+    Loads events in file specified by filename (txt file)
+    :param filename:
+    :return: events
+    """
     print("Loading Events")
     # Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
     events = pd.read_csv(filename, delimiter=' ', header=None, names=['sec', 'nsec', 'x', 'y', 'pol'])
@@ -310,12 +319,6 @@ def load_events(filename):
     return events
 
 
-def mexhat(t, sigma=8.0*10e-2, k_e = 1.0*10e-3, Ce = 0.22):
-
-    c = 2. / math.sqrt(3 * sigma) * (math.pi ** 0.25)
-    return c * (1 - t ** 2 / sigma ** 2) * np.exp(-t ** 2 / (2 * sigma ** 2))
-
-
 def initialize_sensormap(sensor_height, sensor_width):
     """
     Initializes sensormap, which is a
@@ -323,7 +326,7 @@ def initialize_sensormap(sensor_height, sensor_width):
     with tuple (t,pol) as entries
     :param sensor_height:
     :param sensor_width:
-    :return:
+    :return: initial sensormap np.array([.. ])->128*128 pixels
     """
     sensormap_t = np.zeros((sensor_height, sensor_width),
                           dtype=[('time', 'f8'), ('polarity', 'i4')])
@@ -339,7 +342,7 @@ def update_sensormap(sensormap, event):
     Runtime: ~200seconds for all events
     :param sensormap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
     :param event: Pandas Series with ['t', 'x', 'y', 'pol']
-    :return:
+    :return: void
     """
     x = int(event['x'])
     y = int(event['y'])
@@ -353,7 +356,7 @@ def update_sensormap_from_batch(sensormap, batch_event):
     Updates sensormap for each event. Saves event at t and t-t_c
     :param sensormap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
     :param event: Pandas DataFrame with ['t', 'x', 'y', 'pol']
-    :return:
+    :return: void
     """
     for event in batch_event:
         x = int(event['x'])
@@ -372,7 +375,7 @@ def event_likelihood(z, mu, sigma, k_e):
     :param mu: mean
     :param sigma: standard deviation
     :param k_e: minimum constant / noise
-    :return:
+    :return: event-likelihood (scalar)
     """
     y = k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(z - mu) ** 2 / (2 * sigma) ** 2)
     return y/np.max(y)
