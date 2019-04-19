@@ -362,6 +362,21 @@ def update_sensormap_from_batch(sensormap, batch_event):
         sensormap[0][y, x] = (event['t'], event['pol'])
     return
 
+def normalize_particle_weights(particles):
+    '''
+    normalizes particle weights
+    :param particles: particles
+    :return: particles with normalized weight (sum of weights = 1)
+    '''
+    s=0
+    for i in range(len(particles)):
+        s += particles.loc[i, 'Weight']
+
+    for i in range(len(particles)):
+        particles.loc[i, 'Weight']=particles.loc[i, 'Weight']/s
+
+    return particles
+
 
 def resampling(particles):
     '''
@@ -476,14 +491,3 @@ if __name__ == '__main__':
     # plt.scatter(particles_per_event['u'], particles_per_event['v'])
     # plt.show()
 '''
-
-events= load_events('events_small')
-particles=init_particles(5)
-particles.loc[0, 'Weight'] = 0
-particles.loc[1, 'Weight'] = 0
-particles.loc[2, 'Weight'] = 0
-particles.loc[3, 'Weight'] = 1
-particles.loc[4, 'Weight'] = 0
-
-print (particles)
-print (resampling(particles))
