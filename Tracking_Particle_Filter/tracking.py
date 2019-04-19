@@ -45,6 +45,7 @@ def camera_intrinsics():
     K=np.array([[f_x,s,x_0],[0,f_y,y_0],[0,0,1]])
     return K
 
+
 def event2angles(event, df_rotationmatrices, calibration):
     """
     For a given event, generates dataframe
@@ -121,12 +122,13 @@ def generate_random_rotmat(seed = None):
     n2 = np.random.uniform(-np.pi, np.pi)
     n3 = np.random.uniform(-np.pi, np.pi)
 
-    M = sp.expm(np.dot(0.5, G1) + np.dot(0.5, G2) + np.dot(0.5, G3))
+    M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
 
     return M
 
+
 def test_distributions_rotmat(rotation_matrices):
-   """
+    """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
 
     Function checks whether the rotation matrices are really randomly distributed.
@@ -173,10 +175,6 @@ def test_distributions_rotmat(rotation_matrices):
     ax.scatter3D([1], [0], [0], 'b')
     plt.show()
 
-
-
-
-
 ##initialize num_particles particles
 
 def init_particles(N):
@@ -185,6 +183,7 @@ def init_particles(N):
     out: data frame with Index, Rotation matrix and weight
     TODO: Add time to particle. For example, make particles every 1/1000 s. We will need to save particles somewhere.
     '''
+
     # p0 = np.eye(3)      #initial rotation matrix of particles
     df = pd.DataFrame(columns=['Rotation', 'Weight'])
     df['Rotation'] = df['Rotation'].astype(object)
@@ -216,9 +215,9 @@ def motion_update(particles):
         # n3 = np.random.normal(0.0, sigma3**2 * tau)
         # p_u.append(np.dot(particle[i], sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))))
     updated_particles['Rotation'] = updated_particles['Rotation'].apply(
-        lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma2* tau), G1)
-                                    + np.dot(np.random.normal(0.0, sigma2*tau), G2)
-                                    + np.dot(np.random.normal(0.0,sigma2* tau), G3))))
+        lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma1**2 * tau), G1)
+                                    + np.dot(np.random.normal(0.0, sigma2**2 *tau), G2)
+                                    + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
     return updated_particles
 
 
@@ -256,8 +255,6 @@ def get_pixelmap_for_particles(event, sensormap, particles_all_time):
     particles_per_event2map(event, particles, camera_intrinsicsK)
 
     pass
-
-
 
 
 def measurement_update_temp(event, particle, pixelmap):
@@ -366,6 +363,36 @@ def update_sensormap_from_batch(sensormap, batch_event):
     return
 
 
+def resampling(particles):
+    '''
+    resamples particles
+    :param particles: tuple of N particles: (rotmat, normalized weight)
+    :return: resampled particles, weighted average
+    '''
+    sum_of_weights = np.zeros(len(particles))   # generate vector of length N
+    s=0
+
+    for i in range(len(particles)):
+        sum_of_weights[i] = s + particles.loc[i, 'Weight']
+        s += particles.loc[i, 'Weight']
+
+    resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
+    resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
+    for i in range(len(particles)):
+        r = np.random.uniform(0, 1)
+        for n in range(len(particles)):
+            if sum_of_weights[n] >= r and n==0:
+                n_tilde=n
+            if sum_of_weights[n] >= r and r > sum_of_weights[n - 1]:
+                n_tilde=n
+
+
+        resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
+        resampled_particles.at[i, ['Weight']]=float(1/len(particles))
+
+    return resampled_particles
+
+
 def event_likelihood(z, mu, sigma, k_e):
     """
     For a given absolute log intensity difference z,
@@ -381,6 +408,7 @@ def event_likelihood(z, mu, sigma, k_e):
     return y/np.max(y)
 
 
+'''
 if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
@@ -447,3 +475,15 @@ if __name__ == '__main__':
     # plt.figure(2)
     # plt.scatter(particles_per_event['u'], particles_per_event['v'])
     # plt.show()
+'''
+
+events= load_events('events_small')
+particles=init_particles(5)
+particles.loc[0, 'Weight'] = 0
+particles.loc[1, 'Weight'] = 0
+particles.loc[2, 'Weight'] = 0
+particles.loc[3, 'Weight'] = 1
+particles.loc[4, 'Weight'] = 0
+
+print (particles)
+print (resampling(particles))
