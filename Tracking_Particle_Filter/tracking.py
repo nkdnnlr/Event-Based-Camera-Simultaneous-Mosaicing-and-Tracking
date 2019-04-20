@@ -274,7 +274,7 @@ def get_intensity_from_gradientmap(gradientmap, u, v):
     """
     return gradientmap[v, u]
 
-def event_likelihood(z, mu, sigma, k_e):
+def event_likelihood(z, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     """
     For a given absolute log intensity difference z,
     returns the likelihood of an event.
@@ -290,7 +290,7 @@ def event_likelihood(z, mu, sigma, k_e):
 
 
 
-def measurement_update_temp(event_batch,
+def measurement_update(event_batch,
                             particles,
                             all_rotations,
                             sensortensor):
@@ -315,41 +315,18 @@ def measurement_update_temp(event_batch,
         pm_ttc = particles_per_event2map(event, particle_ttc, calibration)[['u', 'v']]
         print("PM_t", pm_t)
         print("PM_ttc", pm_ttc)
-        # to be continued...
-        pm_t.apply(lambda x: x)# get_intensity_from_gradientmap(gradientmap=intensity_map,
-                                       # u=u_, v=v_)
-        pm_ttc # = get_intensity_from_gradientmap(gradientmap=intensity_map,
-        #                                u=u_, v=v_)
+        u_ttc = pm_ttc.at[0, 'u']
+        v_ttc = pm_ttc.at[0, 'v']
+        print(u_ttc)
+        print(v_ttc)
+        pm_t['logintensity_ttc'] = intensity_map[v_ttc, u_ttc]
+        pm_t['logintensity_t'] = pm_t.apply(lambda row: intensity_map[row['u'], row['v']])
+        particles['z'] = pm_t['logintensity_t'] - pm_t['logintensity_ttc']
+        particles['weight'].append(particles['z'].apply(lambda z: event_likelihood(z)))
+    particles['weight'] = particles['weight'].mean(axis=1) ##not tested, probably wrong
+    ### Delete ['z'] column
+    return particles
 
-    #     z = ...
-    #     append weight with likelihood (call event_likelihood...)
-    # average all weights for each particle
-    # return particles with new weights.
-
-    pass
-
-
-def measurement_update(event, particle_rm_t, particle_rm_t_minus_tc,  weigths):
-    """
-    :param event: 0, time, x ,y , a bunch of things
-    :param particle_rm: particle rotation matrix
-    :param weigths: integer weight
-    :return: updated particle weights
-    """
-
-    p_m = []
-
-
-    for i in range(len(particle_rm_t)):
-        pw1t, pw2t, pw3t = particle_rm_t.dot(camera_intrinsics(event[2],event[3],1))
-        pw1_tmintc, pw2_tmintc, pw3_tmintc = particle_rm_t_minus_tc.dot(camera_intrinsics(event[2], event[3], 1))
-
-        pm1t = math.atan(pw1/pw3)
-        pm2t = math.atan(pw2 / math.sqrt(pw1**2 + pw3**2))
-        pm1_tmintc = math.atan(pw1_tmintc / pw3_tmintc)
-        pm2_tmintc = math.atan(pw2_tmintc / math.sqrt(pw1_tmintc ** 2 + pw3_tmintc ** 2))
-
-        # pm12 = [pm1t, pm2t]
 
 
 
@@ -461,11 +438,14 @@ if __name__ == '__main__':
     # measurement_update_temp(event_batch, particles,
     #                         all_rotations, sensortensor)
 
-    # particles1 = init_particles(1)
-    # particles5 = init_particles(5)
-    # particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
-    # print(particles5)
-    # exit()
+    particles1 = init_particles(1)
+    particles5 = init_particles(5)
+    print(particles1.at[0, 'Weight'])
+    # print(particles1['Weight'].tolist())
+    exit()
+    particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
+    print(particles5)
+    exit()
 
     ### Testing the event stream and pixelmap. TODO: Something is flipped. Else looks alright.
     fig_sensor = plt.figure(1)
