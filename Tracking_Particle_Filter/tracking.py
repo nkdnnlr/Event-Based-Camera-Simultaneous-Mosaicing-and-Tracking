@@ -121,7 +121,7 @@ def generate_random_rotmat(seed = None):
     n2 = np.random.uniform(-np.pi, np.pi)
     n3 = np.random.uniform(-np.pi, np.pi)
 
-    M = sp.expm(np.dot(0.5, G1) + np.dot(0.5, G2) + np.dot(0.5, G3))
+    M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
 
     return M
 
