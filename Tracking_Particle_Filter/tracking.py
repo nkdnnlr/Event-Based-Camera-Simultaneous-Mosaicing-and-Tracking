@@ -172,11 +172,9 @@ def init_particles(N):
     w0 = 1/N
     for i in range(N):
         # TODO: random seed is fixed now. Change again!
-        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=True, seed=2)]
+        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=False, seed=None)]
         df.at[i, ['Weight']] = float(w0)
     return df
-
-
 
     # print(events)
 
@@ -353,15 +351,12 @@ def resampling(particles):
     :param particles: tuple of N particles: (rotmat, normalized weight)
     :return: resampled particles, weighted average
     '''
-    sum_of_weights = np.zeros(len(particles))   # generate vector of length N
-    s=0
-
-    for i in range(len(particles)):
-        sum_of_weights[i] = s + particles.loc[i, 'Weight']
-        s += particles.loc[i, 'Weight']
+    sum_of_weights=particles['Weight'].cumsum(axis=0)
 
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
     resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
+
+
     for i in range(len(particles)):
         r = np.random.uniform(0, 1)
         for n in range(len(particles)):
@@ -376,6 +371,8 @@ def resampling(particles):
 
     return resampled_particles
 
+particles=init_particles(5)
+print(resampling(particles))
 
 def test_distributions_rotmat(rotation_matrices):
     """
@@ -426,7 +423,7 @@ def test_distributions_rotmat(rotation_matrices):
     plt.show()
 
 
-
+'''
 if __name__ == '__main__':
     calibration = camera_intrinsics()
     event_batch = load_events(event_file, 300)
@@ -483,7 +480,7 @@ if __name__ == '__main__':
     # plt.xlim([0, 2048])
     # plt.ylim([0, 1024])
     plt.show()
-
+'''
 
 
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
