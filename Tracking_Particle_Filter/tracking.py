@@ -20,12 +20,9 @@ intensity_map = np.load('../output/intensity_map.npy')
 
 
 # TODO: Change!
-firstevents=np.array([[0, 1249173, 108, 112, 1],
-                     [0, 1259493, 109, 109, 1]])
 
 num_particles = 500
 num_events_batch = 300
-tau=firstevents[1][1]-firstevents[0][1]         #time between events
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
 sigma = 8.0*10**(-2)
@@ -73,6 +70,7 @@ def load_events(filename, head = None):
         return events
     else:
         return events.head(head)
+
 
 def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
     """
@@ -172,7 +170,7 @@ def init_particles(N, unit=False):
     w0 = 1/N
     for i in range(N):
         # TODO: random seed is fixed now. Change again!
-        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=True, seed=None)]
+        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=False, seed=None)]
         df.at[i, ['Weight']] = float(w0)
     return df
 
@@ -352,26 +350,42 @@ def resampling(particles):
     :param particles: tuple of N particles: (rotmat, normalized weight)
     :return: resampled particles, weighted average
     '''
-    sum_of_weights=particles['Weight'].cumsum(axis=0)
 
+    sum_of_weights=particles['Weight'].cumsum(axis=0)
+    print(sum_of_weights)
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
     resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
 
     for i in range(len(particles)):     # i: resampling for each particle
         r = np.random.uniform(0, 1)
+        print(r)
+
         for n in range(len(particles)):
             if sum_of_weights[n] >= r and n==0:
                 n_tilde=n
+                continue
             if sum_of_weights[n] >= r and r > sum_of_weights[n - 1]:
                 n_tilde=n
+                continue
 
+        print(n_tilde)
         resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
         resampled_particles.at[i, ['Weight']]=float(1/len(particles))
 
     return resampled_particles
 
+
+def mean_of_resampled_particles(particles):
+
+
+
+    return
+
+
 particles=init_particles(5)
 print(resampling(particles))
+
+
 
 def test_distributions_rotmat(rotation_matrices):
     """
@@ -479,7 +493,7 @@ if __name__ == '__main__':
     # plt.xlim([0, 2048])
     # plt.ylim([0, 1024])
     plt.show()
-
+'''
 
 
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
@@ -518,7 +532,7 @@ if __name__ == '__main__':
 #     return
 
 
-
+'''
 if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
