@@ -23,6 +23,7 @@ intensity_map = np.load('../output/intensity_map.npy')
 
 num_particles = 500
 num_events_batch = 300
+tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
 sigma = 8.0*10**(-2)
@@ -347,14 +348,18 @@ def resampling(particles):
     return resampled_particles
 
 
+
 def mean_of_resampled_particles(particles):
     '''
-    :param particles: resampled particles (all with the same weight)
+    :param particles: pandas df of resampled particles (all with the same weight)
     :return: mean of rotation matrix
     '''
-
-
-    return
+    rotmats=np.zeros((len(particles),3,3))
+    for i in range(len(particles)):
+        rotmats[i] = sp.logm(particles['Rotation'].to_numpy()[i])
+    liemean = sum(rotmats)/len(particles)
+    mean = sp.expm(liemean)
+    return mean
 
 
 
@@ -406,7 +411,7 @@ def test_distributions_rotmat(rotation_matrices):
     ax.scatter3D([1], [0], [0], 'b')
     plt.show()
 
-
+'''
 if __name__ == '__main__':
     calibration = camera_intrinsics()
     event_batch = load_events(event_file, 300)
@@ -463,7 +468,7 @@ if __name__ == '__main__':
     # plt.xlim([0, 2048])
     # plt.ylim([0, 1024])
     plt.show()
-
+'''
 
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
 #     """
@@ -501,7 +506,7 @@ if __name__ == '__main__':
 #     return
 
 
-
+'''
 if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
@@ -568,3 +573,4 @@ if __name__ == '__main__':
     plt.figure(2)
     plt.scatter(particles_per_event['u'], particles_per_event['v'])
     plt.show()
+'''
