@@ -356,7 +356,7 @@ def resampling(particles):
 
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
     resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
-    '''
+
     for i in range(len(particles)):     # i: resampling for each particle
         r = np.random.uniform(0, 1)
         for n in range(len(particles)):
@@ -367,12 +367,6 @@ def resampling(particles):
 
         resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
         resampled_particles.at[i, ['Weight']]=float(1/len(particles))
-    '''
-    i,j=0,0
-
-    for i in range(len(particles)):
-        r = np.random.uniform(0,1)
-        
 
     return resampled_particles
 
@@ -485,7 +479,7 @@ if __name__ == '__main__':
     # plt.xlim([0, 2048])
     # plt.ylim([0, 1024])
     plt.show()
-'''
+
 
 
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
@@ -646,3 +640,4 @@ if __name__ == '__main__':
     # plt.figure(2)
     # plt.scatter(particles_per_event['u'], particles_per_event['v'])
     # plt.show()
+'''
