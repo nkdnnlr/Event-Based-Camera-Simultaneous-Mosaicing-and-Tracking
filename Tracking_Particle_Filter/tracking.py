@@ -20,13 +20,10 @@ intensity_map = np.load('../output/intensity_map.npy')
 
 
 # TODO: Change!
-firstevents=np.array([[0, 1249173, 108, 112, 1],
-                     [0, 1259493, 109, 109, 1]])
 
 num_particles = 500
 num_events_batch = 300
 tau=firstevents[1][1]-firstevents[0][1]         #time between events
-# tau_c=2000                                      #time between events in same pixel
 mu = 0.22
 sigma = 8.0*10**(-2)
 minimum_constant = 1e-3
@@ -73,6 +70,7 @@ def load_events(filename, head = None):
         return events
     else:
         return events.head(head)
+
 
 def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
     """
@@ -158,6 +156,7 @@ def generate_random_rotmat(unit=False, seed = None):
         M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
 
     return M
+
 
 def init_particles(N):
     '''
@@ -351,11 +350,12 @@ def resampling(particles):
     :param particles: tuple of N particles: (rotmat, normalized weight)
     :return: resampled particles, weighted average
     '''
+
     sum_of_weights=particles['Weight'].cumsum(axis=0)
 
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
     resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
-    '''
+
     for i in range(len(particles)):     # i: resampling for each particle
         r = np.random.uniform(0, 1)
         for n in range(len(particles)):
@@ -366,17 +366,11 @@ def resampling(particles):
 
         resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
         resampled_particles.at[i, ['Weight']]=float(1/len(particles))
-    '''
-    i,j=0,0
 
-    for i in range(len(particles)):
-        r = np.random.uniform(0,1)
-        
+    #TODO: mean of rotation matrices
 
     return resampled_particles
 
-particles=init_particles(5)
-print(resampling(particles))
 
 def test_distributions_rotmat(rotation_matrices):
     """
@@ -523,7 +517,7 @@ if __name__ == '__main__':
 #     return
 
 
-'''
+
 if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
@@ -590,4 +584,4 @@ if __name__ == '__main__':
     # plt.figure(2)
     # plt.scatter(particles_per_event['u'], particles_per_event['v'])
     # plt.show()
-'''
+
