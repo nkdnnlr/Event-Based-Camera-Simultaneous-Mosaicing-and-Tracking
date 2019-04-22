@@ -355,9 +355,8 @@ def resampling(particles):
 
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
     resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
-
-
-    for i in range(len(particles)):
+    '''
+    for i in range(len(particles)):     # i: resampling for each particle
         r = np.random.uniform(0, 1)
         for n in range(len(particles)):
             if sum_of_weights[n] >= r and n==0:
@@ -365,9 +364,14 @@ def resampling(particles):
             if sum_of_weights[n] >= r and r > sum_of_weights[n - 1]:
                 n_tilde=n
 
-
         resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
         resampled_particles.at[i, ['Weight']]=float(1/len(particles))
+    '''
+    i,j=0,0
+
+    for i in range(len(particles)):
+        r = np.random.uniform(0,1)
+        
 
     return resampled_particles
 
