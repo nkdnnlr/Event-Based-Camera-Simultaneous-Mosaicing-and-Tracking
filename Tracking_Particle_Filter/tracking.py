@@ -20,8 +20,6 @@ intensity_map = np.load('../output/intensity_map.npy')
 
 
 # TODO: Change!
-firstevents=np.array([[0, 1249173, 108, 112, 1],
-                     [0, 1259493, 109, 109, 1]])
 
 num_particles = 500
 num_events_batch = 300
@@ -46,7 +44,6 @@ def camera_intrinsics():
 
     K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
     return K
-
 
 def load_events(filename, head = None):
     """
@@ -102,7 +99,6 @@ def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
 
     return df_angles
 
-
 def angles2map(theta, phi, height=1024, width=2048):
     """
     Converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
@@ -117,7 +113,6 @@ def angles2map(theta, phi, height=1024, width=2048):
     x = np.floor((theta + np.pi)/(2*np.pi)*width)
     return y, x
 
-
 def particles_per_event2map(event, particles, calibration):
     """
     For each event, gets map angles and coordinates (for on panoramic image)
@@ -131,7 +126,6 @@ def particles_per_event2map(event, particles, calibration):
         lambda row: angles2map(row['theta'], row['phi']), axis=1))
     particles_per_event['pol'] = event['pol']
     return particles_per_event
-
 
 def generate_random_rotmat(unit=False, seed = None):
     """
@@ -178,16 +172,7 @@ def init_particles(N):
 
     # print(events)
 
-
 ### PARTICLE FILTER ###
-
-# define global variables:
-         #amount of particles
-
-
-##initialize num_particles particles
-
-
 
 def motion_update(particles):
     '''
@@ -214,7 +199,6 @@ def motion_update(particles):
                                     + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
     return updated_particles
 
-
 def initialize_sensortensor(sensor_height, sensor_width):
     """
     Initializes sensortensor, which is a
@@ -231,7 +215,6 @@ def initialize_sensortensor(sensor_height, sensor_width):
     sensortensor = np.array([sensortensor_t, sensortensor_tc])
     return sensortensor
 
-
 def update_sensortensor(sensortensor, event):
     """
     Updates sensortensor for each event. Saves event at t and t-t_c
@@ -246,7 +229,6 @@ def update_sensortensor(sensortensor, event):
     sensortensor[0][y, x] = (event['t'], event['pol'])
     return
 
-
 def get_latest_particles(t_asked, particles_all_time):
     """
     From list of particles over all times
@@ -260,7 +242,6 @@ def get_latest_particles(t_asked, particles_all_time):
     dt_pos_inv = 1. / dt_pos
     t_particles = math.floor(t_asked * dt_pos_inv) / dt_pos
     return particles_all_time[particles_all_time['t'] == t_particles]
-
 
 def get_intensity_from_gradientmap(gradientmap, u, v):
     """
@@ -285,8 +266,6 @@ def event_likelihood(z, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     """
     y = k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(z - mu) ** 2 / (2 * sigma) ** 2)
     return y/np.max(y)
-
-
 
 def measurement_update(event_batch,
                             particles,
@@ -325,10 +304,6 @@ def measurement_update(event_batch,
     ### Delete ['z'] column
     return particles
 
-
-
-
-
 def normalize_particle_weights(particles):
     '''
     normalizes particle weights
@@ -344,7 +319,6 @@ def normalize_particle_weights(particles):
 
     return particles
 
-
 def resampling(particles):
     '''
     resamples particles
@@ -355,7 +329,7 @@ def resampling(particles):
 
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
     resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
-    '''
+
     for i in range(len(particles)):     # i: resampling for each particle
         r = np.random.uniform(0, 1)
         for n in range(len(particles)):
@@ -366,13 +340,7 @@ def resampling(particles):
 
         resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
         resampled_particles.at[i, ['Weight']]=float(1/len(particles))
-    '''
-    i,j=0,0
-
-    for i in range(len(particles)):
-        r = np.random.uniform(0,1)
-        
-
+    
     return resampled_particles
 
 particles=init_particles(5)
@@ -427,7 +395,6 @@ def test_distributions_rotmat(rotation_matrices):
     plt.show()
 
 
-'''
 if __name__ == '__main__':
     calibration = camera_intrinsics()
     event_batch = load_events(event_file, 300)
@@ -443,10 +410,10 @@ if __name__ == '__main__':
     particles5 = init_particles(5)
     print(particles1.at[0, 'Weight'])
     # print(particles1['Weight'].tolist())
-    exit()
+    # exit()
     particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
     print(particles5)
-    exit()
+    #exit()
 
     ### Testing the event stream and pixelmap. TODO: Something is flipped. Else looks alright.
     fig_sensor = plt.figure(1)
@@ -484,7 +451,6 @@ if __name__ == '__main__':
     # plt.xlim([0, 2048])
     # plt.ylim([0, 1024])
     plt.show()
-'''
 
 
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
@@ -523,7 +489,7 @@ if __name__ == '__main__':
 #     return
 
 
-'''
+
 if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
@@ -583,11 +549,10 @@ if __name__ == '__main__':
     # print(updated_particles)
 
     test_distributions_rotmat(updated_particles['Rotation'])
-    # test_distributions_rotmat(updated_particles['Rotation'])
-    # plt.figure(1)
-    # plt.scatter(particles_per_event['theta'], particles_per_event['phi'])
-    # plt.show()
-    # plt.figure(2)
-    # plt.scatter(particles_per_event['u'], particles_per_event['v'])
-    # plt.show()
-'''
+    test_distributions_rotmat(updated_particles['Rotation'])
+    plt.figure(1)
+    plt.scatter(particles_per_event['theta'], particles_per_event['phi'])
+    plt.show()
+    plt.figure(2)
+    plt.scatter(particles_per_event['u'], particles_per_event['v'])
+    plt.show()
