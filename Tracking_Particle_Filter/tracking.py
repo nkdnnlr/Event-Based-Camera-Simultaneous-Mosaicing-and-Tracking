@@ -113,7 +113,7 @@ def angles2map(theta, phi, height=1024, width=2048):
     :param width: width of image in pixels
     :return: tuple with integer map points (pixel coordinates)
     """
-    y = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))
+    y = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))+height
     x = np.floor((theta + np.pi)/(2*np.pi)*width)
     return y, x
 
@@ -327,9 +327,6 @@ def measurement_update(event_batch,
     return particles
 
 
-
-
-
 def normalize_particle_weights(particles):
     '''
     normalizes particle weights
@@ -372,7 +369,6 @@ def resampling(particles):
 
     for i in range(len(particles)):
         r = np.random.uniform(0,1)
-        
 
     return resampled_particles
 
@@ -530,7 +526,7 @@ if __name__ == '__main__':
     events = load_events('../data/synth1/events.txt')
 
     calibration = camera_intrinsics()
-    event_batch = load_events(event_file, 300)
+    event_batch = load_events(event_file, num_particles)
     particles = init_particles(1, unit=True)
     print(particles)
     sensortensor = initialize_sensortensor(128, 128)
@@ -579,8 +575,8 @@ if __name__ == '__main__':
     fig_mappoints = plt.figure(2)
     plt.scatter(u, v, c=pol)
     plt.title("Mappoints")
-    # plt.xlim([0, 2048])
-    # plt.ylim([0, 1024])
+    plt.xlim([0, 2048])
+    plt.ylim([0, 1024])
     plt.show()
 
 
