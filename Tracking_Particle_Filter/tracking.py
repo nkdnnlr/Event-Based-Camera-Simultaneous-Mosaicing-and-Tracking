@@ -113,7 +113,7 @@ def angles2map(theta, phi, height=1024, width=2048):
     :param width: width of image in pixels
     :return: tuple with integer map points (pixel coordinates)
     """
-    y = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))
+    y = (np.floor((phi+np.pi/2)/np.pi*height))
     x = np.floor((theta + np.pi)/(2*np.pi)*width)
     return y, x
 
