@@ -87,8 +87,11 @@ def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
     coordinates = ['r_w1', 'r_w2', 'r_w3']
     df_coordinates = pd.DataFrame.from_records(df_rotationmatrices.apply(lambda x: np.dot(x, event_times_K)),
                                                columns=coordinates)
+    # print(df_coordinates['r_w1'])
+    # print(df_coordinates['r_w1'].str.get(0))
+    # print(df_coordinates['r_w1'].str.get(1))
 
-    df_coordinates['r_w1'] = df_coordinates['r_w1'].str.get(0)
+    df_coordinates['r_w1'] = df_coordinates['r_w1'].str.get(0) # ATTENTION: This is tested and correct. str.get(0) just removes brackets. See output above.
     df_coordinates['r_w2'] = df_coordinates['r_w2'].str.get(0)
     df_coordinates['r_w3'] = df_coordinates['r_w3'].str.get(0)
 
@@ -97,7 +100,7 @@ def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
     df_angles['theta'] = np.arctan(df_coordinates['r_w1'] / df_coordinates['r_w3'])
     df_angles['phi'] = np.arctan(df_coordinates['r_w2'] / np.sqrt(df_coordinates['r_w1']**2 + df_coordinates['r_w3']**2))
 
-    return df_angles #TODO: IS IT TESTED THAT THETA AND PHI ARE IN THE RESPECTIVE REGIONS ONLY?
+    return df_angles
 
 
 def angles2map(theta, phi, height=1024, width=2048):
@@ -110,9 +113,9 @@ def angles2map(theta, phi, height=1024, width=2048):
     :param width: width of image in pixels
     :return: tuple with integer map points (pixel coordinates)
     """
-    y = np.floor(((phi+np.pi/2)/np.pi)*height)  #TODO: had a -1 in here, why???
-    x = np.floor(((theta + np.pi)/(2*np.pi))*width)
-    return y,x
+    y = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))
+    x = np.floor((theta + np.pi)/(2*np.pi)*width)
+    return y, x
 
 
 def particles_per_event2map(event, particles, calibration):
@@ -121,7 +124,7 @@ def particles_per_event2map(event, particles, calibration):
     :param event: one event
     :param particles: dataframe with particles
     :param calibration:
-    :return:  DataFrame with particles as rows and as columns v, u (coordinates on map) and pol (polarisation)
+    :return:  DataFrame with particles as rows and as columns theta, phi, v, u (coordinates)
     """
     particles_per_event = event_and_particles_to_angles(event, particles['Rotation'], calibration)
     particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
@@ -156,7 +159,7 @@ def generate_random_rotmat(unit=False, seed = None):
 
     return M
 
-def init_particles(N):
+def init_particles(N, unit=False):
     '''
     in: # particles num_particles
     out: data frame with Index, Rotation matrix and weight
@@ -169,13 +172,9 @@ def init_particles(N):
     w0 = 1/N
     for i in range(N):
         # TODO: random seed is fixed now. Change again!
-        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=False, seed=None)]
+        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=True, seed=None)]
         df.at[i, ['Weight']] = float(w0)
     return df
-
-
-
-
 
     # print(events)
 
@@ -323,6 +322,7 @@ def measurement_update(event_batch,
         particles['z'] = pm_t['logintensity_t'] - pm_t['logintensity_ttc']
         particles['weight'].append(particles['z'].apply(lambda z: event_likelihood(z)))
     particles['weight'] = particles['weight'].mean(axis=1) ##not tested, probably wrong
+
     ### Delete ['z'] column
     return particles
 
@@ -356,9 +356,8 @@ def resampling(particles):
 
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
     resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
-
-
-    for i in range(len(particles)):
+    '''
+    for i in range(len(particles)):     # i: resampling for each particle
         r = np.random.uniform(0, 1)
         for n in range(len(particles)):
             if sum_of_weights[n] >= r and n==0:
@@ -366,9 +365,14 @@ def resampling(particles):
             if sum_of_weights[n] >= r and r > sum_of_weights[n - 1]:
                 n_tilde=n
 
-
         resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
         resampled_particles.at[i, ['Weight']]=float(1/len(particles))
+    '''
+    i,j=0,0
+
+    for i in range(len(particles)):
+        r = np.random.uniform(0,1)
+        
 
     return resampled_particles
 
@@ -461,10 +465,9 @@ if __name__ == '__main__':
     v = []
     pol = []
     # exit()
-    # df_uvp = particles_per_event2map(event_batch.iloc[0], particles, calibration)[['u','v', 'pol']]
     for idx, event in event_batch.iterrows():
         # df_angles = event_and_particles_to_angles(event, particles['Rotation'], calibration)
-        df_uvp = particles_per_event2map(event, particles, calibration)[['v','u', 'pol']]
+        df_uvp = particles_per_event2map(event, particles, calibration)[['v', 'u', 'pol']]
         u_ = int(df_uvp['u'].tolist()[0])
         u.append(u_)
         v_ = int(df_uvp['v'].tolist()[0])
@@ -483,8 +486,6 @@ if __name__ == '__main__':
     # plt.ylim([0, 1024])
     plt.show()
 '''
-
-
 
 
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
@@ -523,10 +524,65 @@ if __name__ == '__main__':
 #     return
 
 
-'''
+
 if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
+
+    calibration = camera_intrinsics()
+    event_batch = load_events(event_file, 300)
+    particles = init_particles(1, unit=True)
+    print(particles)
+    sensortensor = initialize_sensortensor(128, 128)
+
+    #
+    # measurement_update_temp(event_batch, particles,
+    #                         all_rotations, sensortensor)
+
+    # particles1 = init_particles(1)
+    # particles5 = init_particles(5)
+    # particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
+    # print(particles5)
+    # exit()
+
+    ### Testing the event stream and pixelmap. TODO: Something is flipped. Else looks alright.
+    fig_sensor = plt.figure(1)
+    plt.scatter(event_batch['x'], event_batch['y'], c=event_batch['pol'])
+    plt.xlim([0, 128])
+    plt.ylim([0, 128])
+    plt.title("Sensor")
+    plt.show()
+
+    # rotmat0 = generate_random_rotmat(0)
+    # print(rotmat0)
+
+    mappoints = []
+    u = []
+    v = []
+    pol = []
+    # exit()
+    # df_uvp = particles_per_event2map(event_batch.iloc[0], particles, calibration)[['u','v', 'pol']]
+    for idx, event in event_batch.iterrows():
+        # df_angles = event_and_particles_to_angles(event, particles['Rotation'], calibration)
+        df_uvp = particles_per_event2map(event, particles, calibration)[['v','u', 'pol']]
+        u_ = int(df_uvp['u'].tolist()[0])
+        u.append(u_)
+        v_ = int(df_uvp['v'].tolist()[0])
+        v.append(v_)
+        pol_ = df_uvp['pol'].tolist()[0]
+        pol.append(pol_)
+        intensity = get_intensity_from_gradientmap(gradientmap=intensity_map,
+                                       u=u_, v=v_)
+        print(intensity)
+
+
+    fig_mappoints = plt.figure(2)
+    plt.scatter(u, v, c=pol)
+    plt.title("Mappoints")
+    # plt.xlim([0, 2048])
+    # plt.ylim([0, 1024])
+    plt.show()
+
 
     # sensortensor = initialize_sensortensor(128, 128)
     # starttime = time.time()
@@ -572,17 +628,17 @@ if __name__ == '__main__':
     # # state update step
 
     # camera_intrinsicsK = camera_intrinsics()
-    particles= init_particles(num_particles)
+    # particles= init_particles(num_particles)
     # # print(particles)
     # particles_per_event = event_and_particles_to_angles(events.loc[0], particles['Rotation'], camera_intrinsicsK)
     # # particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
     # #     lambda row: angles2map(row['theta'], row['phi']), axis=1))
     # particles_per_event = particles_per_event2map(events.loc[0], particles, camera_intrinsicsK)
     # # print(particles_per_event)
-    updated_particles = motion_update(particles)
+    # updated_particles = motion_update(particles)
     # print(updated_particles)
 
-    test_distributions_rotmat(updated_particles['Rotation'])
+    # test_distributions_rotmat(updated_particles['Rotation'])
     # test_distributions_rotmat(updated_particles['Rotation'])
     # plt.figure(1)
     # plt.scatter(particles_per_event['theta'], particles_per_event['phi'])
@@ -590,4 +646,3 @@ if __name__ == '__main__':
     # plt.figure(2)
     # plt.scatter(particles_per_event['u'], particles_per_event['v'])
     # plt.show()
-'''
