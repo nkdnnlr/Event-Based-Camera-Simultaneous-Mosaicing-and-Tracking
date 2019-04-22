@@ -9,10 +9,10 @@ import math
 import sys
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
- import plotly
- import plotly.plotly as py
- import plotly.graph_objs as go
- plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
+import plotly
+import plotly.plotly as py
+import plotly.graph_objs as go
+plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
 import matplotlib.pyplot as plt
 
 event_file = '../data/synth1/events.txt'
@@ -97,8 +97,7 @@ def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
     df_angles['theta'] = np.arctan(df_coordinates['r_w1'] / df_coordinates['r_w3'])
     df_angles['phi'] = np.arctan(df_coordinates['r_w2'] / np.sqrt(df_coordinates['r_w1']**2 + df_coordinates['r_w3']**2))
 
-    return df_angles
-
+    return df_angles #TODO: IS IT TESTED THAT THETA AND PHI ARE IN THE RESPECTIVE REGIONS ONLY?
 
 
 def angles2map(theta, phi, height=1024, width=2048):
@@ -111,9 +110,9 @@ def angles2map(theta, phi, height=1024, width=2048):
     :param width: width of image in pixels
     :return: tuple with integer map points (pixel coordinates)
     """
-    y = np.floor((-1*phi+np.pi/2)/np.pi*height)
-    x = np.floor((theta + np.pi)/(2*np.pi)*width)
-    return y, x
+    y = np.floor(((phi+np.pi/2)/np.pi)*height)  #TODO: had a -1 in here, why???
+    x = np.floor(((theta + np.pi)/(2*np.pi))*width)
+    return y,x
 
 
 def particles_per_event2map(event, particles, calibration):
@@ -122,7 +121,7 @@ def particles_per_event2map(event, particles, calibration):
     :param event: one event
     :param particles: dataframe with particles
     :param calibration:
-    :return:  DataFrame with particles as rows and as columns theta, phi, v, u (coordinates)
+    :return:  DataFrame with particles as rows and as columns v, u (coordinates on map) and pol (polarisation)
     """
     particles_per_event = event_and_particles_to_angles(event, particles['Rotation'], calibration)
     particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
@@ -138,22 +137,21 @@ def generate_random_rotmat(unit=False, seed = None):
     :param seed: Fixing the random seed to test function. None per default.
     :return: 3x3 np.array
     """
-    if seed is not None:
-        np.random.seed(seed)
-
-    G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
-    G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
-    G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
-
     if unit:
-        M = sp.expm(np.dot(0, G1) + np.dot(0, G2) + np.dot(0, G3))
+        M = np.eye(3)
 
     else:
+        if seed is not None:
+            np.random.seed(seed)
+
+        G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
+        G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
+        G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+
         n1 = np.random.uniform(-np.pi, np.pi)
         n2 = np.random.uniform(-np.pi, np.pi)
         n3 = np.random.uniform(-np.pi, np.pi)
 
-    M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
         M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
 
     return M
@@ -171,12 +169,15 @@ def init_particles(N):
     w0 = 1/N
     for i in range(N):
         # TODO: random seed is fixed now. Change again!
-        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=False, seed=2)]
+        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=True, seed=2)]
         df.at[i, ['Weight']] = float(w0)
     return df
 
 
 
+
+
+    # print(events)
 
 
 ### PARTICLE FILTER ###
@@ -215,35 +216,35 @@ def motion_update(particles):
     return updated_particles
 
 
-def initialize_sensormap(sensor_height, sensor_width):
+def initialize_sensortensor(sensor_height, sensor_width):
     """
-    Initializes sensormap, which is a
-    tensor of size sensorwidth x sensorheight x 2,
+    Initializes sensortensor, which is a
+    tensor of size  2 x sensorwidth x sensorheight,
     with tuple (t,pol) as entries
     :param sensor_height:
     :param sensor_width:
-    :return: initial sensormap np.array([.. ])->128*128 pixels
+    :return: initial sensortensor np.array([.. ])->128*128 pixels
     """
-    sensormap_t = np.zeros((sensor_height, sensor_width),
+    sensortensor_t = np.zeros((sensor_height, sensor_width),
                           dtype=[('time', 'f8'), ('polarity', 'i4')])
-    sensormap_tc = np.zeros((sensor_height, sensor_width),
+    sensortensor_tc = np.zeros((sensor_height, sensor_width),
                            dtype=[('time', 'f8'), ('polarity', 'i4')])
-    sensormap = np.array([sensormap_t, sensormap_tc])
-    return sensormap
+    sensortensor = np.array([sensortensor_t, sensortensor_tc])
+    return sensortensor
 
 
-def update_sensormap(sensormap, event):
+def update_sensortensor(sensortensor, event):
     """
-    Updates sensormap for each event. Saves event at t and t-t_c
+    Updates sensortensor for each event. Saves event at t and t-t_c
     Runtime: ~200seconds for all events
-    :param sensormap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
+    :param sensortensor: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
     :param event: Pandas Series with ['t', 'x', 'y', 'pol']
     :return: void
     """
     x = int(event['x'])
     y = int(event['y'])
-    sensormap[1][y, x] = sensormap[0][y, x]
-    sensormap[0][y, x] = (event['t'], event['pol'])
+    sensortensor[1][y, x] = sensortensor[0][y, x]
+    sensortensor[0][y, x] = (event['t'], event['pol'])
     return
 
 
@@ -291,24 +292,24 @@ def event_likelihood(z, mu, sigma, k_e):
 def measurement_update_temp(event_batch,
                             particles,
                             all_rotations,
-                            sensormap):
+                            sensortensor):
     """
     Working on... not tested yet
     :param event_batch:
     :param particles: the 50 or so particles with attributes ['rotation']
-    :param sensormap:
+    :param sensortensor:
     :param pixelmap:
     :return:
     """
     particles['z'] = 0
     particles['weight'] = []
     for event in event_batch:
-        update_sensormap(sensormap, event)
+        update_sensortensor(sensortensor, event)
         x = event['x']
         y = event['y']
-        t = sensormap[0][y, x][0]
-        ttc = sensormap[1][y, x][0]
-        particle_ttc = get_latest_particles(ttc, particles_all_time=all_rotations) # single rotationmatrix before ttc
+        t = sensortensor[0][y, x][0]
+        tminustc = sensortensor[1][y, x][0]
+        particle_ttc = get_latest_particles(tminustc, particles_all_time=all_rotations) # single rotationmatrix before ttc
         pm_t = particles_per_event2map(event, particles, calibration)[['u', 'v']]
         pm_ttc = particles_per_event2map(event, particle_ttc, calibration)[['u', 'v']]
         print("PM_t", pm_t)
@@ -398,9 +399,6 @@ def resampling(particles):
     return resampled_particles
 
 
-
-
-
 def test_distributions_rotmat(rotation_matrices):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
@@ -456,13 +454,17 @@ if __name__ == '__main__':
     event_batch = load_events(event_file, 300)
     particles = init_particles(1)
     print(particles)
-    sensormap = initialize_sensormap(128, 128)
+    sensortensor = initialize_sensortensor(128, 128)
 
     #
     # measurement_update_temp(event_batch, particles,
-    #                         all_rotations, sensormap)
+    #                         all_rotations, sensortensor)
 
-
+    # particles1 = init_particles(1)
+    # particles5 = init_particles(5)
+    # particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
+    # print(particles5)
+    # exit()
 
     ### Testing the event stream and pixelmap. TODO: Something is flipped. Else looks alright.
     fig_sensor = plt.figure(1)
@@ -470,7 +472,7 @@ if __name__ == '__main__':
     plt.xlim([0, 128])
     plt.ylim([0, 128])
     plt.title("Sensor")
-    # plt.show()
+    plt.show()
 
     # rotmat0 = generate_random_rotmat(0)
     # print(rotmat0)
@@ -480,9 +482,10 @@ if __name__ == '__main__':
     v = []
     pol = []
     # exit()
+    # df_uvp = particles_per_event2map(event_batch.iloc[0], particles, calibration)[['u','v', 'pol']]
     for idx, event in event_batch.iterrows():
         # df_angles = event_and_particles_to_angles(event, particles['Rotation'], calibration)
-        df_uvp = particles_per_event2map(event, particles, calibration)[['v', 'u', 'pol']]
+        df_uvp = particles_per_event2map(event, particles, calibration)[['v','u', 'pol']]
         u_ = int(df_uvp['u'].tolist()[0])
         u.append(u_)
         v_ = int(df_uvp['v'].tolist()[0])
@@ -494,27 +497,29 @@ if __name__ == '__main__':
         print(intensity)
 
 
-    # fig_mappoints = plt.figure(2)
-    # plt.scatter(u, v, c=pol)
-    # plt.title("Mappoints")
+    fig_mappoints = plt.figure(2)
+    plt.scatter(u, v, c=pol)
+    plt.title("Mappoints")
     # plt.xlim([0, 2048])
     # plt.ylim([0, 1024])
-    # plt.show()
+    plt.show()
 
 
 
-# def get_pixelmap_for_particles(event, sensormap, particles_all_time):
+
+
+# def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
 #     """
 #     Working on...
 #     :param event:
-#     :param sensormap:
+#     :param sensortensor:
 #     :param particles_all_time:
 #     :return:
 #     """
 #     t = event['t']
 #     x = event['x']
 #     y = event['y']
-#     ttc = sensormap[1][x,y][0]
+#     ttc = sensortensor[1][x,y][0]
 #
 #     particles = get_latest_particles(t_asked=t, particles_all_time=particles_all_time)
 #
@@ -524,18 +529,18 @@ if __name__ == '__main__':
 #
 #     pass
 
-# def update_sensormap_from_batch(sensormap, batch_event):
+# def update_sensortensor_from_batch(sensortensor, batch_event):
 #     """
-#     Updates sensormap for each event. Saves event at t and t-t_c
-#     :param sensormap: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
+#     Updates sensortensor for each event. Saves event at t and t-t_c
+#     :param sensortensor: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
 #     :param event: Pandas DataFrame with ['t', 'x', 'y', 'pol']
 #     :return: void
 #     """
 #     for event in batch_event:
 #         x = int(event['x'])
 #         y = int(event['y'])
-#         sensormap[1][y, x] = sensormap[0][y, x]
-#         sensormap[0][y, x] = (event['t'], event['pol'])
+#         sensortensor[1][y, x] = sensortensor[0][y, x]
+#         sensortensor[0][y, x] = (event['t'], event['pol'])
 #     return
 
 
@@ -544,42 +549,42 @@ if __name__ == '__main__':
 
     events = load_events('../data/synth1/events.txt')
 
-    # sensormap = initialize_sensormap(128, 128)
+    # sensortensor = initialize_sensortensor(128, 128)
     # starttime = time.time()
     # i = 0
     # for idx, event in events.head(50000).iterrows():
     #     # print(event)
-    #     update_sensormap(sensormap=sensormap, event=event)
+    #     update_sensortensor(sensortensor=sensortensor, event=event)
     #     # i += 1
     #     # if i >= 10:
     #     #     break
     # endtime = time.time() - starttime
     # print("Endtime: ", endtime)
-    # print(sensormap[0][0,0][0])
+    # print(sensortensor[0][0,0][0])
     # exit()
 
-    ## Testing sensormap
+    ## Testing sensortensor
     # event = events.loc[557]
     # print(event)
-    # sensormap_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # sensormap_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # sensormap_ttc = np.array([sensormap_t, sensormap_tc])
-    # print(sensormap_ttc)
-    # update_sensormap(sensormap_ttc, event)
-    # print(sensormap_ttc)
+    # sensortensor_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # sensortensor_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # sensortensor_ttc = np.array([sensortensor_t, sensortensor_tc])
+    # print(sensortensor_ttc)
+    # update_sensortensor(sensortensor_ttc, event)
+    # print(sensortensor_ttc)
     #
-    # ## Testing sensormap
+    # ## Testing sensortensor
     # # event = events.loc[557]
     # # print(event)
-    # # sensormap_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # # sensormap_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # # sensormap_ttc = np.array([sensormap_t, sensormap_tc])
-    # # print(sensormap_ttc)
-    # # update_sensormap(sensormap_ttc, event)
-    # # print(sensormap_ttc)
+    # # sensortensor_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # # sensortensor_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
+    # # sensortensor_ttc = np.array([sensortensor_t, sensortensor_tc])
+    # # print(sensortensor_ttc)
+    # # update_sensortensor(sensortensor_ttc, event)
+    # # print(sensortensor_ttc)
     # #
-    # # # print(sensormap[1])
-    # # print(sensormap_ttc[1][0,0])
+    # # # print(sensortensor[1])
+    # # print(sensortensor_ttc[1][0,0])
     # #
     # #
     #
