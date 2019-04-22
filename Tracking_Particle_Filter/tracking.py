@@ -376,14 +376,13 @@ def resampling(particles):
 
 
 def mean_of_resampled_particles(particles):
-
+    '''
+    :param particles: resampled particles (all with the same weight)
+    :return: mean of rotation matrix
+    '''
 
 
     return
-
-
-particles=init_particles(5)
-print(resampling(particles))
 
 
 
