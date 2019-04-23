@@ -125,6 +125,26 @@ def event_and_particles_to_angles(event, particles, calibration):
     return particles
     # return df_angles
 
+def event_and_oneparticle_to_angles(event, particle, calibration):
+    """
+    For a given event, generates dataframe
+    with particles as rows and angles as columns.
+    :param event: Event in camera frame
+    :param df_rotationmatrices: DataFrame with rotation matrices
+    :param calibration: camera calibration
+    :return: DataFrame with particles as rows and angles as columns.
+    """
+    event_times_K = np.dot(np.linalg.inv(calibration), np.array([[event['x']], [event['y']], [1]])) #from camera frame (u,v) to world reference frame
+    r_w1, r_w2, r_w3 = np.dot(particle['Rotation'], event_times_K)
+    r_w1 = r_w1[0]
+    r_w2 = r_w2[0]
+    r_w3 = r_w3[0]
+
+    theta = np.arctan(r_w1 / r_w3)
+    phi = np.arctan(r_w2 / np.sqrt(r_w1 ** 2 + r_w3 ** 2))
+
+    return theta, phi
+
 
 def angles2map(theta, phi, height=1024, width=2048):
     """
@@ -136,9 +156,9 @@ def angles2map(theta, phi, height=1024, width=2048):
     :param width: width of image in pixels
     :return: tuple with integer map points (pixel coordinates)
     """
-    y = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))+height
-    x = np.floor((theta + np.pi)/(2*np.pi)*width)
-    return y, x
+    v = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))+height
+    u = np.floor((theta + np.pi)/(2*np.pi)*width)
+    return v, u
 
 
 def angles2map_df(particles, height=1024, width=2048):
@@ -154,6 +174,21 @@ def angles2map_df(particles, height=1024, width=2048):
     particles['u'] = particles['theta'].apply(lambda angle: np.floor((angle + np.pi)/(2*np.pi)*width))
     return particles
 
+def angles2map_series(particle, height=1024, width=2048):
+    """
+    For DataFrame particles, converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
+    to integer map points (pixel coordinates)
+    :param particles: DataFrame
+    :param height: height of image in pixels
+    :param width: width of image in pixels
+    :return: particles
+    """
+    particle['v'] = -1*(np.floor((-1 * particle['phi']+np.pi/2)/np.pi*height))+height
+    particle['u'] = np.floor((particle['theta'] + np.pi)/(2*np.pi)*width)
+    return particle
+
+
+
 
 def particles_per_event2map(event, particles, calibration):
     """
@@ -167,6 +202,21 @@ def particles_per_event2map(event, particles, calibration):
     particles = angles2map_df(particles)
     particles['pol'] = event['pol']
     return particles
+
+def oneparticle_per_event2map(event, particle, calibration):
+    """
+    For each event, gets map angles and coordinates (for on panoramic image)
+    :param event: one event
+    :param particles: dataframe with particles
+    :param calibration:
+    :return:  DataFrame with particles as rows and as columns theta, phi, v, u (coordinates)
+    """
+    theta, phi = event_and_oneparticle_to_angles(event, particle, calibration)
+    v, u = angles2map(theta, phi)
+    particle['v'] = v
+    particle['u'] = u
+    particle['pol'] = event['pol']
+    return particle
 
 
 def generate_random_rotmat(unit=False, seed=None):
@@ -204,7 +254,7 @@ def init_particles(N, unit=False, seed=None):
     '''
 
     # p0 = np.eye(3)      #initial rotation matrix of particles
-    df = pd.DataFrame(columns=['Rotation', 'Weight', 'theta', 'phi', 'v', 'u', 'pol', 'r_w1', 'r_w2', 'r_w3'])
+    df = pd.DataFrame(columns=['Rotation', 'Weight', 'theta', 'phi', 'v', 'u', 'pol', 'r_w1', 'r_w2', 'r_w3', 'z'])
     df['Rotation'] = df['Rotation'].astype(object)
     w0 = 1/N
     for i in range(N):
@@ -291,10 +341,10 @@ def get_latest_particles(t_asked, particles_all_time):
     :param particles_all_time:
     :return: the particle that came before a time-of-interest.
     """
-    dt_pos = 1e-4 #TODO: Write as class variable (also dt_pos_inv)
-    dt_pos_inv = 1. / dt_pos
-    t_particles = math.floor(t_asked * dt_pos_inv) / dt_pos
-    return particles_all_time[particles_all_time['t'] == t_particles]
+    # dt_pos = 1e-4 #TODO: Write as class variable (also dt_pos_inv)
+    # dt_pos_inv = 1. / dt_pos
+    # t_particles = math.floor(t_asked * dt_pos_inv) / dt_pos
+    return particles_all_time[particles_all_time['t'] <= t_asked].iloc[-1]
 
 
 def get_intensity_from_gradientmap(gradientmap, u, v):
@@ -311,7 +361,10 @@ def event_likelihood(z, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     """
     For a given absolute log intensity difference z,
     returns the likelihood of an event.
-    likelihood = normalize(gaussian distribution + noise)
+    likelihood = gaussian distribution + noise
+    TODO: Normalize!
+    TODO: What about negative values?
+    TODO: If z negative but event positive, cancel!
     :param z: log intensity difference
     :param mu: mean
     :param sigma: standard deviation
@@ -319,45 +372,39 @@ def event_likelihood(z, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     :return: event-likelihood (scalar)
     """
     y = k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(z - mu) ** 2 / (2 * sigma) ** 2)
-    return y/np.max(y)
+    return y
 
 
 
-def measurement_update(event_batch,
-                            particles,
-                            all_rotations,
-                            sensortensor):
+def measurement_update(events_batch,
+                       particles,
+                       all_rotations,
+                       sensortensor,
+                       calibration):
     """
-    Working on... not tested yet
-    :param event_batch:
-    :param particles: the 50 or so particles with attributes ['rotation']
+
+    :param events_batch:
+    :param particles:
+    :param all_rotations: DataFrame containing one time and one rotation per batch.
     :param sensortensor:
-    :param pixelmap:
+    :param calibration:
     :return:
     """
-    particles['z'] = 0
-    particles['weight'] = []
-    for event in event_batch:
+    particles['Weight'] = np.empty((len(particles), 0)).tolist()
+    for idx, event in events_batch.iterrows():
         update_sensortensor(sensortensor, event)
-        x = event['x']
-        y = event['y']
-        t = sensortensor[0][y, x][0]
-        tminustc = sensortensor[1][y, x][0]
-        particle_ttc = get_latest_particles(tminustc, particles_all_time=all_rotations) # single rotationmatrix before ttc
-        pm_t = particles_per_event2map(event, particles, calibration)[['u', 'v']]
-        pm_ttc = particles_per_event2map(event, particle_ttc, calibration)[['u', 'v']]
-        print("PM_t", pm_t)
-        print("PM_ttc", pm_ttc)
-        u_ttc = pm_ttc.at[0, 'u']
-        v_ttc = pm_ttc.at[0, 'v']
-        print(u_ttc)
-        print(v_ttc)
-        pm_t['logintensity_ttc'] = intensity_map[v_ttc, u_ttc]
-        pm_t['logintensity_t'] = pm_t.apply(lambda row: intensity_map[row['u'], row['v']])
-        particles['z'] = pm_t['logintensity_t'] - pm_t['logintensity_ttc']
-        particles['weight'].append(particles['z'].apply(lambda z: event_likelihood(z)))
-    particles['weight'] = particles['weight'].mean(axis=1) ##not tested, probably wrong
-    ### Delete ['z'] column
+        particles = particles_per_event2map(event, particles, calibration)
+        tminustc = sensortensor[1][int(event['y']), int(event['x'])][0]
+        particle_ttc = get_latest_particles(tminustc,
+                                            particles_all_time=all_rotations)  # single rotationmatrix before ttc
+        particle_ttc = oneparticle_per_event2map(event, particle_ttc, calibration)
+        u_ttc = particle_ttc['u']
+        v_ttc = particle_ttc['v']
+        particles['logintensity_ttc'] = intensity_map[int(v_ttc), int(u_ttc)]
+        particles['logintensity_t'] = particles.apply(lambda row: intensity_map[int(row.v), int(row.v)], axis=1)
+        particles['z'] = abs(particles['logintensity_t'] - particles['logintensity_ttc'])
+        particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z)], axis=1)
+    particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x))  ##not tested, probably wrong
     return particles
 
 
@@ -469,12 +516,12 @@ def test_distributions_rotmat(rotation_matrices):
 
 def run():
     # num_particles = 20
-    print("Start tracker!")
-    starttime = time.time()
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
     events, num_events = load_events(event_file, 3500, return_number=True)
+    events = events.astype({'x': int, 'y': int})
+    print(events.head()['x'])
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
@@ -484,22 +531,32 @@ def run():
 
     batch_nr = 0
     event_nr = 0
+    t_batch = 0
+    all_rotations = pd.DataFrame(columns=['t', 'Rotation'])
+    all_rotations.loc[0] = {'t': t_batch,
+                            'Rotation': np.array([[1,0,0], [0,1,0], [0,0,1]])}
+
+    # print(all_rotations)
+    # exit()
+    print("Start tracker!")
+    starttime = time.time()
+
+
     while batch_nr < num_batches:
         events_batch = events[event_nr:event_nr + num_events_batch]
-        for idx, event in events_batch.iterrows():
-            # print(event)
-
-            particles = particles_per_event2map(event, particles, calibration)
-            pass
-
-
+        t_batch = events.loc[event_nr]['t']
+        dt_batch = (events_batch['t'].max() - events_batch['t'].min())/num_events_batch
+        # print("t_batch: {} sec".format(t_batch))
+        # print("dt_batch: {} sec".format(dt_batch))
+        measurement_update(events_batch, particles, all_rotations, sensortensor, calibration)
+        print(particles['Weight'])
+        exit()
 
 
         event_nr += num_events_batch
         batch_nr += 1
     print(batch_nr)
     print(event_nr)
-
 
 
 
