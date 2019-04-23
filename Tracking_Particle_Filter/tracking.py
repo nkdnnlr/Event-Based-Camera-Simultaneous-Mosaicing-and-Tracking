@@ -450,7 +450,6 @@ if __name__ == '__main__':
     print(particles5)
     # exit()
 
-    ### Testing the event stream and pixelmap. TODO: Something is flipped. Else looks alright.
     fig_sensor = plt.figure(1)
     #exit()
     plt.scatter(event_batch['x'], event_batch['y'], c=event_batch['pol'])
