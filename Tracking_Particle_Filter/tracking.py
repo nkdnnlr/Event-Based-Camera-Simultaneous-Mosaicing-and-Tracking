@@ -1,19 +1,19 @@
 import time
-import sys
-import math
 
 import numpy as np
 import pandas as pd
 import scipy.linalg as sp
 import math
 import sys
-import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-# import plotly
-# import plotly.plotly as py
-# import plotly.graph_objs as go
+import plotly
+import plotly.plotly as py
+import plotly.graph_objs as go
 # plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
-import matplotlib.pyplot as plt
+from sys import platform as sys_pf
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib import pyplot as plt
 
 event_file = '../data/synth1/events.txt'
 intensity_map = np.load('../output/intensity_map.npy')
@@ -156,6 +156,7 @@ def generate_random_rotmat(unit=False, seed = None):
         M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
 
     return M
+
 
 def init_particles(N, unit=False):
     '''
@@ -358,7 +359,6 @@ def resampling(particles):
     return resampled_particles
 
 
-
 def mean_of_resampled_particles(particles):
     '''
     :param particles: pandas df of resampled particles (all with the same weight)
@@ -370,7 +370,6 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
     return mean
-
 
 
 def test_distributions_rotmat(rotation_matrices):
@@ -421,7 +420,7 @@ def test_distributions_rotmat(rotation_matrices):
     ax.scatter3D([1], [0], [0], 'b')
     plt.show()
 
-'''
+
 if __name__ == '__main__':
     calibration = camera_intrinsics()
     event_batch = load_events(event_file, 300)
@@ -440,10 +439,11 @@ if __name__ == '__main__':
     # exit()
     particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
     print(particles5)
-    #exit()
+    # exit()
 
     ### Testing the event stream and pixelmap. TODO: Something is flipped. Else looks alright.
     fig_sensor = plt.figure(1)
+    #exit()
     plt.scatter(event_batch['x'], event_batch['y'], c=event_batch['pol'])
     plt.xlim([0, 128])
     plt.ylim([0, 128])
@@ -457,7 +457,7 @@ if __name__ == '__main__':
     u = []
     v = []
     pol = []
-    # exit()
+
     for idx, event in event_batch.iterrows():
         # df_angles = event_and_particles_to_angles(event, particles['Rotation'], calibration)
         df_uvp = particles_per_event2map(event, particles, calibration)[['v', 'u', 'pol']]
@@ -478,7 +478,6 @@ if __name__ == '__main__':
     # plt.xlim([0, 2048])
     # plt.ylim([0, 1024])
     plt.show()
-'''
 
 
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
