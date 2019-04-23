@@ -9,9 +9,9 @@ import math
 import sys
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import plotly
-import plotly.plotly as py
-import plotly.graph_objs as go
+# import plotly
+# import plotly.plotly as py
+# import plotly.graph_objs as go
 # plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
 from sys import platform as sys_pf
 import matplotlib
@@ -52,7 +52,7 @@ def camera_intrinsics():
     return K
 
 
-def load_events(filename, head = None):
+def load_events(filename, head=None, return_number=False):
     """
     Loads events in file specified by filename (txt file)
     :param filename:
@@ -73,13 +73,19 @@ def load_events(filename, head = None):
     # print("Head: \n", events.head(10))
     # print("Tail: \n", events.tail(10))
     # print(events['0])
-    if head is None:
-        return events, num_events
+    if return_number:
+        if head is None:
+            return events, num_events
+        else:
+            return events.head(head), len(events.head(head))
     else:
-        return events.head(head), len(events.head(head))
+        if head is None:
+            return events
+        else:
+            return events.head(head)
 
 
-def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
+def event_and_particles_to_angles(event, particles, calibration):
     """
     For a given event, generates dataframe
     with particles as rows and angles as columns.
@@ -90,22 +96,34 @@ def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
     """
     event_times_K = np.dot(np.linalg.inv(calibration), np.array([[event['x']], [event['y']], [1]])) #from camera frame (u,v) to world reference frame
     coordinates = ['r_w1', 'r_w2', 'r_w3']
-    df_coordinates = pd.DataFrame.from_records(df_rotationmatrices.apply(lambda x: np.dot(x, event_times_K)),
-                                               columns=coordinates)
+    # df_coordinates = pd.DataFrame()
+    # df_coordinates[coordinates] = pd.DataFrame.from_records(df_rotationmatrices.apply(lambda x: np.dot(x, event_times_K)))
+    particles[coordinates] = pd.DataFrame.from_records(particles['Rotation'].apply(lambda x: np.dot(x, event_times_K)))
+    # df_coordinates = pd.DataFrame.from_records(df_rotationmatrices.apply(lambda x: np.dot(x, event_times_K)),
+    #                                            columns=coordinates)
     # print(df_coordinates['r_w1'])
     # print(df_coordinates['r_w1'].str.get(0))
     # print(df_coordinates['r_w1'].str.get(1))
 
-    df_coordinates['r_w1'] = df_coordinates['r_w1'].str.get(0) # ATTENTION: This is tested and correct. str.get(0) just removes brackets. See output above.
-    df_coordinates['r_w2'] = df_coordinates['r_w2'].str.get(0)
-    df_coordinates['r_w3'] = df_coordinates['r_w3'].str.get(0)
+    particles['r_w1'] = particles['r_w1'].str.get(0)  # ATTENTION: This is tested and correct. str.get(0) just removes brackets. See output above.
+    particles['r_w2'] = particles['r_w2'].str.get(0)
+    particles['r_w3'] = particles['r_w3'].str.get(0)
+
+    # df_coordinates['r_w1'] = df_coordinates['r_w1'].str.get(0) # ATTENTION: This is tested and correct. str.get(0) just removes brackets. See output above.
+    # df_coordinates['r_w2'] = df_coordinates['r_w2'].str.get(0)
+    # df_coordinates['r_w3'] = df_coordinates['r_w3'].str.get(0)
+
 
     # from world reference frame to rotational frame (theta, phi)
-    df_angles = pd.DataFrame(columns=['theta', 'phi'])
-    df_angles['theta'] = np.arctan(df_coordinates['r_w1'] / df_coordinates['r_w3'])
-    df_angles['phi'] = np.arctan(df_coordinates['r_w2'] / np.sqrt(df_coordinates['r_w1']**2 + df_coordinates['r_w3']**2))
+    # df_angles = pd.DataFrame(columns=['theta', 'phi'])
+    # df_angles['theta'] = np.arctan(df_coordinates['r_w1'] / df_coordinates['r_w3'])
+    # df_angles['phi'] = np.arctan(df_coordinates['r_w2'] / np.sqrt(df_coordinates['r_w1']**2 + df_coordinates['r_w3']**2))
 
-    return df_angles
+    particles['theta'] = np.arctan(particles['r_w1'] / particles['r_w3'])
+    particles['phi'] = np.arctan(particles['r_w2'] / np.sqrt(particles['r_w1'] ** 2 + particles['r_w3'] ** 2))
+
+    return particles
+    # return df_angles
 
 
 def angles2map(theta, phi, height=1024, width=2048):
@@ -123,6 +141,20 @@ def angles2map(theta, phi, height=1024, width=2048):
     return y, x
 
 
+def angles2map_df(particles, height=1024, width=2048):
+    """
+    For DataFrame particles, converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
+    to integer map points (pixel coordinates)
+    :param particles: DataFrame
+    :param height: height of image in pixels
+    :param width: width of image in pixels
+    :return: particles
+    """
+    particles['v'] = particles['phi'].apply(lambda angle: -1*(np.floor((-1*angle+np.pi/2)/np.pi*height))+height)
+    particles['u'] = particles['theta'].apply(lambda angle: np.floor((angle + np.pi)/(2*np.pi)*width))
+    return particles
+
+
 def particles_per_event2map(event, particles, calibration):
     """
     For each event, gets map angles and coordinates (for on panoramic image)
@@ -131,13 +163,13 @@ def particles_per_event2map(event, particles, calibration):
     :param calibration:
     :return:  DataFrame with particles as rows and as columns theta, phi, v, u (coordinates)
     """
-    particles_per_event = event_and_particles_to_angles(event, particles['Rotation'], calibration)
-    particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
-        lambda row: angles2map(row['theta'], row['phi']), axis=1))
-    particles_per_event['pol'] = event['pol']
-    return particles_per_event
+    particles = event_and_particles_to_angles(event, particles, calibration)
+    particles = angles2map_df(particles)
+    particles['pol'] = event['pol']
+    return particles
 
-def generate_random_rotmat(unit=False, seed = None):
+
+def generate_random_rotmat(unit=False, seed=None):
     """
     Initializes random rotation matrix
     :param unit: returns unit matrix if True
@@ -164,7 +196,7 @@ def generate_random_rotmat(unit=False, seed = None):
     return M
 
 
-def init_particles(N, unit=False):
+def init_particles(N, unit=False, seed=None):
     '''
     in: # particles num_particles
     out: data frame with Index, Rotation matrix and weight
@@ -172,12 +204,12 @@ def init_particles(N, unit=False):
     '''
 
     # p0 = np.eye(3)      #initial rotation matrix of particles
-    df = pd.DataFrame(columns=['Rotation', 'Weight'])
+    df = pd.DataFrame(columns=['Rotation', 'Weight', 'theta', 'phi', 'v', 'u', 'pol', 'r_w1', 'r_w2', 'r_w3'])
     df['Rotation'] = df['Rotation'].astype(object)
     w0 = 1/N
     for i in range(N):
         # TODO: random seed is fixed now. Change again!
-        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=unit, seed=None)]
+        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=unit, seed=seed)]
         df.at[i, ['Weight']] = float(w0)
     return df
 
@@ -442,7 +474,7 @@ def run():
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
-    events, num_events = load_events(event_file, 3500)
+    events, num_events = load_events(event_file, 3500, return_number=True)
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
@@ -457,8 +489,7 @@ def run():
         for idx, event in events_batch.iterrows():
             # print(event)
 
-            particles_per_event = \
-                particles_per_event2map(event, particles, calibration)
+            particles = particles_per_event2map(event, particles, calibration)
             pass
 
 
@@ -478,9 +509,11 @@ def run():
     pass
 
 if __name__ == '__main__':
+    run()
+    """
     calibration = camera_intrinsics()
     event_batch = load_events(event_file, 300)
-    particles = init_particles(1)
+    particles = init_particles(1, seed=1)
     print(particles)
     sensortensor = initialize_sensortensor(128, 128)
 
@@ -488,23 +521,24 @@ if __name__ == '__main__':
     # measurement_update_temp(event_batch, particles,
     #                         all_rotations, sensortensor)
 
-    particles1 = init_particles(1)
-    particles5 = init_particles(5)
-    print(particles1.at[0, 'Weight'])
+    # particles1 = init_particles(1)
+    # particles5 = init_particles(5)
+    # print(particles1.at[0, 'Weight'])
     # print(particles1['Weight'].tolist())
     # exit()
-    particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
-    print(particles5)
+    # particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
+    # print(particles5)
     # exit()
 
     ### Testing the event stream and pixelmap. TODO: Something is flipped. Else looks alright.
     fig_sensor = plt.figure(1)
     #exit()
+    # print(event_batch['x'])
     plt.scatter(event_batch['x'], event_batch['y'], c=event_batch['pol'])
     plt.xlim([0, 128])
     plt.ylim([0, 128])
     plt.title("Sensor")
-    plt.show()
+    # plt.show()
 
     # rotmat0 = generate_random_rotmat(0)
     # print(rotmat0)
@@ -517,6 +551,8 @@ if __name__ == '__main__':
     for idx, event in event_batch.iterrows():
         # df_angles = event_and_particles_to_angles(event, particles['Rotation'], calibration)
         df_uvp = particles_per_event2map(event, particles, calibration)[['v', 'u', 'pol']]
+
+
         u_ = int(df_uvp['u'].tolist()[0])
         u.append(u_)
         v_ = int(df_uvp['v'].tolist()[0])
@@ -525,14 +561,14 @@ if __name__ == '__main__':
         pol.append(pol_)
         intensity = get_intensity_from_gradientmap(gradientmap=intensity_map,
                                        u=u_, v=v_)
-        print(intensity)
+        # print(intensity)
 
 
     fig_mappoints = plt.figure(2)
     plt.scatter(u, v, c=pol)
     plt.title("Mappoints")
-    # plt.xlim([0, 2048])
-    # plt.ylim([0, 1024])
+    plt.xlim([0, 2048])
+    plt.ylim([0, 1024])
     plt.show()
 
     """
