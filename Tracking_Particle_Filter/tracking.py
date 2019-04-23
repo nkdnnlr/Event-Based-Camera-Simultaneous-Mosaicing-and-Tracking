@@ -179,6 +179,14 @@ def init_particles(N, unit=False):
 
 ### PARTICLE FILTER ###
 
+# define global variables:
+         #amount of particles
+
+
+##initialize num_particles particles
+
+
+
 def motion_update(particles):
     '''
     in: particles as data frame with Rotation and Weight
