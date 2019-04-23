@@ -25,7 +25,7 @@ intensity_map = np.load('../output/intensity_map.npy')
 # Constants
 num_particles = 10
 num_events_batch = 300
-tau=7000
+# tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
 sigma = 8.0*10**(-2)
@@ -275,11 +275,14 @@ def init_particles(N, unit=False, seed=None):
 
 
 
-def motion_update(particles):
-    '''
-    in: particles as data frame with Rotation and Weight
-    out: particles, updated
-    '''
+def motion_update(particles, tau):
+    """
+
+    :param particles: DataFrame
+    :param tau: timestep #TODO: is this tau in seconds?
+    :return: updated particles
+    """
+
     updated_particles = particles.copy()  # type: object
     G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
     G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
@@ -441,7 +444,7 @@ def resampling(particles):
                 continue
 
         resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
-        resampled_particles.at[i, ['Weight']]=float(1/len(particles))
+        resampled_particles.at[i, ['Weight']] = float(1/len(particles))
 
     return resampled_particles
 
@@ -527,8 +530,8 @@ def run():
     event_nr = 0
     t_batch = 0
     all_rotations = pd.DataFrame(columns=['t', 'Rotation'])
-    all_rotations.loc[0] = {'t': t_batch,
-                            'Rotation': np.array([[1,0,0], [0,1,0], [0,0,1]])}
+    all_rotations.loc[batch_nr] = {'t': t_batch,
+                                   'Rotation': np.array([[1,0,0], [0,1,0], [0,0,1]])}
 
     # print(all_rotations)
     # exit()
@@ -543,18 +546,21 @@ def run():
         # print("t_batch: {} sec".format(t_batch))
         # print("dt_batch: {} sec".format(dt_batch))
         measurement_update(events_batch, particles, all_rotations, sensortensor, calibration)
-        print(particles['Weight'])
         particles = normalize_particle_weights(particles)
-        # exit()
-
+        particles = resampling(particles)
 
         event_nr += num_events_batch
         batch_nr += 1
+        t_batch = events.loc[event_nr]['t']
+
+        new_rotation = mean_of_resampled_particles(particles)
+        all_rotations[batch_nr] = {'t': t_batch,
+                                   'Rotation': new_rotation}
+        particles = motion_update(particles, tau=dt_batch)
+
+
     print(batch_nr)
     print(event_nr)
-
-
-
 
     print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
