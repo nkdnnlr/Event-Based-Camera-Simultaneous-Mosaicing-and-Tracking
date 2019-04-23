@@ -337,6 +337,7 @@ def update_sensortensor(sensortensor, event):
 
 def get_latest_particles(t_asked, particles_all_time):
     """
+    #TODO: Only tested for first.
     From list of particles over all times
     (one per timestep/batch, already resampled),
     get set of particles that was just before asked t_asked
@@ -518,7 +519,7 @@ def run():
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
-    events, num_events = load_events(event_file, 3500, return_number=True)
+    events, num_events = load_events(event_file, head=3500, return_number=True)
     events = events.astype({'x': int, 'y': int})
     print(events.head()['x'])
     print("Events total: ", num_events)
@@ -559,7 +560,7 @@ def run():
         new_rotation = mean_of_resampled_particles(particles)
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
-        print(all_rotations)
+        print("Rotations: ", all_rotations)
 
         particles = motion_update(particles, tau=dt_batch)
 
