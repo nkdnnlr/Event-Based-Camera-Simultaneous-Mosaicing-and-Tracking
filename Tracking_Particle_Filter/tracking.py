@@ -19,14 +19,17 @@ event_file = '../data/synth1/events.txt'
 intensity_map = np.load('../output/intensity_map.npy')
 
 
-# TODO: Change!
-
-num_particles = 500
+# Constants
+num_particles = 10
 num_events_batch = 300
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
 sigma = 8.0*10**(-2)
 minimum_constant = 1e-3
+sensor_height = 128
+sensor_width = 128
+image_height = 1024
+image_width = 2*image_height
 
 
 
@@ -67,9 +70,9 @@ def load_events(filename, head = None):
     # print("Tail: \n", events.tail(10))
     # print(events['0])
     if head is None:
-        return events
+        return events, num_events
     else:
-        return events.head(head)
+        return events.head(head), len(events.head(head))
 
 
 def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
@@ -169,7 +172,7 @@ def init_particles(N, unit=False):
     w0 = 1/N
     for i in range(N):
         # TODO: random seed is fixed now. Change again!
-        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=True, seed=None)]
+        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=unit, seed=None)]
         df.at[i, ['Weight']] = float(w0)
     return df
 
@@ -417,7 +420,52 @@ def test_distributions_rotmat(rotation_matrices):
     plt.show()
 
 
+def run():
+    # num_particles = 20
+    print("Start tracker!")
+    starttime = time.time()
+    print("Events per batch: ", num_events_batch)
+    print("Initialized particles: ", num_particles)
+    calibration = camera_intrinsics()
+    events, num_events = load_events(event_file, 3500)
+    print("Events total: ", num_events)
+    num_batches = int(np.floor(num_events/num_events_batch))
+    print("Batches total: ", num_batches)
+    particles = init_particles(num_particles)
+    sensortensor = initialize_sensortensor(128, 128)
+    # print(particles)
+
+    batch_nr = 0
+    event_nr = 0
+    while batch_nr < num_batches:
+        events_batch = events[event_nr:event_nr + num_events_batch]
+        for idx, event in events_batch.iterrows():
+            # print(event)
+
+            particles_per_event = \
+                particles_per_event2map(event, particles, calibration)
+            pass
+
+
+
+
+        event_nr += num_events_batch
+        batch_nr += 1
+    print(batch_nr)
+    print(event_nr)
+
+
+
+
+
+    print("Time passed: {} sec".format(round(time.time() - starttime)))
+    print("Done")
+    pass
+
 if __name__ == '__main__':
+    run()
+
+    """
     calibration = camera_intrinsics()
     event_batch = load_events(event_file, 300)
     particles = init_particles(1)
@@ -474,7 +522,7 @@ if __name__ == '__main__':
     # plt.ylim([0, 1024])
     plt.show()
 
-
+    """
 
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
 #     """
@@ -513,8 +561,9 @@ if __name__ == '__main__':
 
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
+    """
     events = load_events('../data/synth1/events.txt')
 
     # calibration = camera_intrinsics()
@@ -634,3 +683,4 @@ if __name__ == '__main__':
     plt.figure(2)
     plt.scatter(particles_per_event['u'], particles_per_event['v'])
     plt.show()
+    """
