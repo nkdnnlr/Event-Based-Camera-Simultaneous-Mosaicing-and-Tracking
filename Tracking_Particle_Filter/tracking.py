@@ -211,6 +211,7 @@ def motion_update(particles):
                                     + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
     return updated_particles
 
+
 def initialize_sensortensor(sensor_height, sensor_width):
     """
     Initializes sensortensor, which is a
@@ -294,7 +295,7 @@ def measurement_update(event_batch,
     :param particles: the 50 or so particles with attributes ['rotation']
     :param sensortensor:
     :param pixelmap:
-    :return:
+    :return: #TODO
     """
     particles['z'] = 0
     particles['weight'] = []
@@ -341,7 +342,7 @@ def normalize_particle_weights(particles):
 def resampling(particles):
     '''
     resamples particles
-    :param particles: tuple of N particles: (rotmat, normalized weight)
+    :param particles: tuple of N particles: (rotmat, normalized weight) #TODO: tuple or data frame ?
     :return: resampled particles, weighted average
     '''
 
