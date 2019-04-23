@@ -404,7 +404,7 @@ def measurement_update(events_batch,
         u_ttc = particle_ttc['u']
         v_ttc = particle_ttc['v']
         particles['logintensity_ttc'] = intensity_map[int(v_ttc), int(u_ttc)]
-        particles['logintensity_t'] = particles.apply(lambda row: intensity_map[int(row.v), int(row.v)], axis=1)
+        particles['logintensity_t'] = particles.apply(lambda row: intensity_map[int(row.v), int(row.u)], axis=1)
         particles['z'] = abs(particles['logintensity_t'] - particles['logintensity_ttc'])
         particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z)], axis=1)
     particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x))  ##not tested, probably wrong
@@ -422,6 +422,7 @@ def normalize_particle_weights(particles):
 
 
 def resampling(particles):
+    #TODO: Check if it really does what it should. Looks really scary with the if-conditions.
     '''
     resamples particles
     :param particles: tuple of N particles: (rotmat, normalized weight)
@@ -451,12 +452,13 @@ def resampling(particles):
 
 def mean_of_resampled_particles(particles):
     '''
+    TODO: Does too much computations: gets matrix for every particle for every particle ;)
     :param particles: pandas df of resampled particles (all with the same weight)
     :return: mean of rotation matrix
     '''
     rotmats=np.zeros((len(particles),3,3))
     for i in range(len(particles)):
-        rotmats[i] = sp.logm(particles['Rotation'].to_numpy()[i])
+        rotmats[i] = sp.logm(particles['Rotation'].as_matrix()[i])
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
     return mean
@@ -530,8 +532,9 @@ def run():
     event_nr = 0
     t_batch = 0
     all_rotations = pd.DataFrame(columns=['t', 'Rotation'])
+    unit_matrix = np.array([[1,0,0], [0,1,0], [0,0,1]])
     all_rotations.loc[batch_nr] = {'t': t_batch,
-                                   'Rotation': np.array([[1,0,0], [0,1,0], [0,0,1]])}
+                                   'Rotation': unit_matrix}
 
     # print(all_rotations)
     # exit()
@@ -554,8 +557,10 @@ def run():
         t_batch = events.loc[event_nr]['t']
 
         new_rotation = mean_of_resampled_particles(particles)
-        all_rotations[batch_nr] = {'t': t_batch,
-                                   'Rotation': new_rotation}
+        all_rotations.loc[batch_nr] = {'t': t_batch,
+                                       'Rotation': new_rotation}
+        print(all_rotations)
+
         particles = motion_update(particles, tau=dt_batch)
 
 
