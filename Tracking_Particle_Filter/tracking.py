@@ -414,13 +414,7 @@ def normalize_particle_weights(particles):
     :param particles: particles
     :return: particles with normalized weight (sum of weights = 1)
     '''
-    s=0
-    for i in range(len(particles)):
-        s += particles.loc[i, 'Weight']
-
-    for i in range(len(particles)):
-        particles.loc[i, 'Weight']=particles.loc[i, 'Weight']/s
-
+    particles['Weight'] = particles['Weight']/particles['Weight'].sum()
     return particles
 
 
@@ -550,7 +544,8 @@ def run():
         # print("dt_batch: {} sec".format(dt_batch))
         measurement_update(events_batch, particles, all_rotations, sensortensor, calibration)
         print(particles['Weight'])
-        exit()
+        particles = normalize_particle_weights(particles)
+        # exit()
 
 
         event_nr += num_events_batch
