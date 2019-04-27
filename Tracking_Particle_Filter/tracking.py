@@ -29,8 +29,6 @@ mu = 0.22
 sigma = 8.0*10**(-2)
 minimum_constant = 1e-3
 
-
-
 def camera_intrinsics():
     '''
     in: -
@@ -44,7 +42,6 @@ def camera_intrinsics():
 
     K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
     return K
-
 
 def load_events(filename, head = None):
     """
@@ -71,7 +68,6 @@ def load_events(filename, head = None):
         return events
     else:
         return events.head(head)
-
 
 def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
     """
@@ -101,7 +97,6 @@ def event_and_particles_to_angles(event, df_rotationmatrices, calibration):
 
     return df_angles
 
-
 def angles2map(theta, phi, height=1024, width=2048):
     """
     Converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
@@ -115,7 +110,6 @@ def angles2map(theta, phi, height=1024, width=2048):
     y = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))+height
     x = np.floor((theta + np.pi)/(2*np.pi)*width)
     return y, x
-
 
 def particles_per_event2map(event, particles, calibration):
     """
@@ -157,12 +151,11 @@ def generate_random_rotmat(unit=False, seed = None):
 
     return M
 
-
 def init_particles(N, unit=False):
     '''
     in: # particles num_particles
     out: data frame with Index, Rotation matrix and weight
-    TODO: Add time to particle. For example, make particles every 1/1000 s. We will need to save particles somewhere.
+    TODO: Add time to particle. For example, update particles every 1/1000 s. We will need to save particles somewhere.
     '''
 
     # p0 = np.eye(3)      #initial rotation matrix of particles
@@ -184,8 +177,6 @@ def init_particles(N, unit=False):
 
 
 ##initialize num_particles particles
-
-
 
 def motion_update(particles):
     '''
@@ -228,7 +219,6 @@ def initialize_sensortensor(sensor_height, sensor_width):
     sensortensor = np.array([sensortensor_t, sensortensor_tc])
     return sensortensor
 
-
 def update_sensortensor(sensortensor, event):
     """
     Updates sensortensor for each event. Saves event at t and t-t_c
@@ -243,7 +233,6 @@ def update_sensortensor(sensortensor, event):
     sensortensor[0][y, x] = (event['t'], event['pol'])
     return
 
-
 def get_latest_particles(t_asked, particles_all_time):
     """
     From list of particles over all times
@@ -257,7 +246,6 @@ def get_latest_particles(t_asked, particles_all_time):
     dt_pos_inv = 1. / dt_pos
     t_particles = math.floor(t_asked * dt_pos_inv) / dt_pos
     return particles_all_time[particles_all_time['t'] == t_particles]
-
 
 def get_intensity_from_gradientmap(gradientmap, u, v):
     """
@@ -282,8 +270,6 @@ def event_likelihood(z, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     """
     y = k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(z - mu) ** 2 / (2 * sigma) ** 2)
     return y/np.max(y)
-
-
 
 def measurement_update(event_batch,
                             particles,
@@ -322,7 +308,6 @@ def measurement_update(event_batch,
     ### Delete ['z'] column
     return particles
 
-
 def normalize_particle_weights(particles):
     '''
     normalizes particle weights
@@ -337,7 +322,6 @@ def normalize_particle_weights(particles):
         particles.loc[i, 'Weight']=particles.loc[i, 'Weight']/s
 
     return particles
-
 
 def resampling(particles):
     '''
@@ -366,7 +350,6 @@ def resampling(particles):
 
     return resampled_particles
 
-
 def mean_of_resampled_particles(particles):
     '''
     :param particles: pandas df of resampled particles (all with the same weight)
@@ -378,7 +361,6 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
     return mean
-
 
 def test_distributions_rotmat(rotation_matrices):
     """
@@ -427,7 +409,6 @@ def test_distributions_rotmat(rotation_matrices):
     ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
     ax.scatter3D([1], [0], [0], 'b')
     plt.show()
-
 
 if __name__ == '__main__':
     calibration = camera_intrinsics()
@@ -487,7 +468,6 @@ if __name__ == '__main__':
     # plt.ylim([0, 1024])
     plt.show()
 
-
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
 #     """
 #     Working on...
@@ -522,7 +502,6 @@ if __name__ == '__main__':
 #         sensortensor[1][y, x] = sensortensor[0][y, x]
 #         sensortensor[0][y, x] = (event['t'], event['pol'])
 #     return
-
 
 '''
 if __name__ == '__main__':
