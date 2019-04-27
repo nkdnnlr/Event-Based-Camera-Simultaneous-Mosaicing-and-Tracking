@@ -667,7 +667,7 @@ def run():
     print(event_nr)
     visualize_particles(mean_of_rotations['Rotation'], )
 
-    print("Time passed: {} sec".format(round(time.time() - starttime)))
+    print("Time passed: {} sec".format(round(time.time() - starttime)))<
     print("Done")
 
 if __name__ == '__main__':
