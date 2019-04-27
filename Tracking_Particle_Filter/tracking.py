@@ -12,7 +12,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import plotly
 import plotly.plotly as py
 import plotly.graph_objs as go
-plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
+# plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
+plotly.tools.set_credentials_file(username='joelba', api_key='08Fb4jIrJRMdPWG1lWop')
 from sys import platform as sys_pf
 # import matplotlib
 # matplotlib.use("TkAgg")
