@@ -459,7 +459,7 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
 
-    visualize_trajectory(particles['Rotation'])
+    visualize_particles(particles['Rotation'])
 
 
     '''
@@ -556,7 +556,7 @@ def visualize_particles(rotation_matrices, mean=None):
 
     ax = plt.axes(projection='3d')
     ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
-    if mean=None:
+    if mean == None:
         ax.scatter3D([1], [0], [0], 'b')
     else:
         mean_vec = np.dot(mean, vec)
