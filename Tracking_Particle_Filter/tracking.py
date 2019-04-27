@@ -9,14 +9,16 @@ import math
 import sys
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-# import plotly
-# import plotly.plotly as py
-# import plotly.graph_objs as go
-# plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
+import plotly
+import plotly.plotly as py
+import plotly.graph_objs as go
+plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
 from sys import platform as sys_pf
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
+from numpy import outer
+import math
 
 event_file = '../data/synth1/events.txt'
 intensity_map = np.load('../output/intensity_map.npy')
@@ -25,7 +27,7 @@ intensity_map = np.load('../output/intensity_map.npy')
 # Constants
 num_particles = 10
 num_events_batch = 300
-# tau=7000
+tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
 sigma = 8.0*10**(-2)
@@ -101,18 +103,10 @@ def event_and_particles_to_angles(event, particles, calibration):
     particles[coordinates] = pd.DataFrame.from_records(particles['Rotation'].apply(lambda x: np.dot(x, event_times_K)))
     # df_coordinates = pd.DataFrame.from_records(df_rotationmatrices.apply(lambda x: np.dot(x, event_times_K)),
     #                                            columns=coordinates)
-    # print(df_coordinates['r_w1'])
-    # print(df_coordinates['r_w1'].str.get(0))
-    # print(df_coordinates['r_w1'].str.get(1))
 
     particles['r_w1'] = particles['r_w1'].str.get(0)  # ATTENTION: This is tested and correct. str.get(0) just removes brackets. See output above.
     particles['r_w2'] = particles['r_w2'].str.get(0)
     particles['r_w3'] = particles['r_w3'].str.get(0)
-
-    # df_coordinates['r_w1'] = df_coordinates['r_w1'].str.get(0) # ATTENTION: This is tested and correct. str.get(0) just removes brackets. See output above.
-    # df_coordinates['r_w2'] = df_coordinates['r_w2'].str.get(0)
-    # df_coordinates['r_w3'] = df_coordinates['r_w3'].str.get(0)
-
 
     # from world reference frame to rotational frame (theta, phi)
     # df_angles = pd.DataFrame(columns=['theta', 'phi'])
@@ -427,15 +421,21 @@ def resampling(particles):
     #TODO: Check if it really does what it should. Looks really scary with the if-conditions.
     '''
     resamples particles
-    :param particles: tuple of N particles: (rotmat, normalized weight) #TODO: tuple or data frame ?
+    :param particles:
     :return: resampled particles, weighted average
     '''
 
     sum_of_weights=particles['Weight'].cumsum(axis=0)
 
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
-    resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
-
+    # resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
+    # resampled_particles['Weight'] = resampled_particles['Weight'].astype(object)
+    #
+    # resampled_particles['Rotation'] = particles['Rotation'].sample(n=num_particles, replace=True,
+    #                                                            weights=particles['Weight'], random_state=1)
+    # resampled_particles['Weight'] = float(1 / num_particles)
+    # resampled_particles = resampled_particles.reset_index(drop=True)
+    # #
     for i in range(len(particles)):     # i: resampling for each particle
         r = np.random.uniform(0, 1)
         for n in range(len(particles)):
@@ -448,6 +448,7 @@ def resampling(particles):
 
         resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
         resampled_particles.at[i, ['Weight']] = float(1/len(particles))
+        resampled_particles['Weight'] = resampled_particles['Weight'].astype('float64')
 
     return resampled_particles
 
@@ -466,7 +467,7 @@ def mean_of_resampled_particles(particles):
     return mean
 
 
-def test_distributions_rotmat(rotation_matrices):
+def visualize_trajectory(rotation_matrices):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
 
@@ -480,6 +481,8 @@ def test_distributions_rotmat(rotation_matrices):
     rotX = vecM.str.get(0)
     rotY = vecM.str.get(1)
     rotZ = vecM.str.get(2)
+
+
 
     trace1 = go.Scatter3d(
         x=rotX,
@@ -497,7 +500,7 @@ def test_distributions_rotmat(rotation_matrices):
     )
 
 
-    data = [trace1]
+    data2 = [trace1]
     layout = go.Layout(
         margin=dict(
             l=0,
@@ -506,13 +509,59 @@ def test_distributions_rotmat(rotation_matrices):
             t=0
         )
     )
-    fig = go.Figure(data=data, layout=layout)
-    py.iplot(fig, filename='simple-3d-scatter')
+    fig = go.Figure(data=data2, layout=layout)
+    py.iplot(fig, filename='simple-3d-scatter', fileopt='extend')
 
-    ax = plt.axes(projection='3d')
-    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
-    ax.scatter3D([1], [0], [0], 'b')
-    plt.show()
+    # ax = plt.axes(projection='3d')
+    # ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
+    # ax.scatter3D([1], [0], [0], 'b')
+    # plt.show()
+
+def plot_unitsphere():
+    '''
+
+    :return:
+    '''
+    rotmat = pd.DataFrame(columns=['Rotation'])
+    for i in range(0, 100):
+        rotmat.loc[i] = [generate_random_rotmat(unit=False)]
+
+
+    vec = np.array([1, 0, 0]).T
+    vecM = rotmat['Rotation'].apply(lambda x: np.dot([x], vec))
+    vecM = vecM.str.get(0)
+    rotX = vecM.str.get(0)
+    rotY = vecM.str.get(1)
+    rotZ = vecM.str.get(2)
+
+
+    trace1 = go.Scatter3d(
+        x=rotX,
+        y=rotY,
+        z=rotZ,
+        mode='markers',
+        marker=dict(
+            size=12,
+            line=dict(
+                color='rgba(217, 217, 217, 0.14)',
+                width=0.1
+            ),
+            opacity=0.8
+        )
+    )
+
+    data2 = [trace1]
+    layout = go.Layout(
+        margin=dict(
+            l=0,
+            r=0,
+            b=0,
+            t=0
+        )
+    )
+    fig = go.Figure(data=data2, layout=layout)
+    py.iplot(fig, filename='simple-3d-scatter', fileopt='extend')
+
 
 
 def run():
@@ -542,15 +591,15 @@ def run():
     # exit()
     print("Start tracker!")
     starttime = time.time()
-
-
+    mean_of_rotations = pd.DataFrame(columns = ['Rotation'])
+    mean_of_rotations['Rotation'].astype(object)
     while batch_nr < num_batches:
         events_batch = events[event_nr:event_nr + num_events_batch]
         t_batch = events.loc[event_nr]['t']
         dt_batch = (events_batch['t'].max() - events_batch['t'].min())/num_events_batch
         # print("t_batch: {} sec".format(t_batch))
         # print("dt_batch: {} sec".format(dt_batch))
-        measurement_update(events_batch, particles, all_rotations, sensortensor, calibration)
+        particles = measurement_update(events_batch, particles, all_rotations, sensortensor, calibration)
         particles = normalize_particle_weights(particles)
         particles = resampling(particles)
 
@@ -565,17 +614,76 @@ def run():
 
         particles = motion_update(particles, tau=dt_batch)
 
+        mean_of_rotations.loc[batch_nr] = [new_rotation]
+        visualize_trajectory(mean_of_rotations['Rotation'])
+
 
     print(batch_nr)
     print(event_nr)
+    #visualize_trajectory(mean_of_rotations['Rotation'])
 
     print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
-    pass
 
 if __name__ == '__main__':
-    run()
-    """
+     # run()
+    plot_unitsphere()
+
+
+#########TESTING
+
+    # print("Events per batch: ", num_events_batch)
+    # print("Initialized particles: ", num_particles)
+    # calibration = camera_intrinsics()
+    # events, num_events = load_events(event_file, head=1, return_number=True)
+    # events = events.astype({'x': int, 'y': int})
+    # print(events.head()['x'])
+    # print("Events total: ", num_events)
+    # num_batches = int(np.floor(num_events/num_events_batch))
+    # print("Batches total: ", num_batches)
+    # particles = init_particles(num_particles)
+    # sensortensor = initialize_sensortensor(128, 128)
+    # # print(particles)
+    #
+    # batch_nr = 0
+    # event_nr = 0
+    # t_batch = 0
+    # all_rotations = pd.DataFrame(columns=['t', 'Rotation'])
+    # unit_matrix = np.array([[1,0,0], [0,1,0], [0,0,1]])
+    # all_rotations.loc[batch_nr] = {'t': t_batch,
+    #                                'Rotation': unit_matrix}
+    #
+    #
+    # particles = init_particles(num_particles)
+    # particles = measurement_update(events, particles, all_rotations, sensortensor, calibration)
+    #
+    # particles = normalize_particle_weights(particles)
+    # particles = resampling(particles)
+    #
+    # resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
+    # resampled_particles['Rotation'] = particles['Rotation'].sample(n=num_particles, replace=True,
+    #                                          weights=particles['Weight'], random_state=1)
+    #
+    # resampled_particles['Weight'] = float(1/num_particles)
+    # resampled_particles['Weight'] = resampled_particles['Weight'].astype(object)
+    # resampled_particles = resampled_particles.reset_index(drop=True)
+    # print(resampled_particles)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
     calibration = camera_intrinsics()
     event_batch = load_events(event_file, 300)
     particles = init_particles(1, seed=1)
@@ -635,7 +743,7 @@ if __name__ == '__main__':
     plt.ylim([0, 1024])
     plt.show()
 
-    """
+
 # def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
 #     """
 #     Working on...
@@ -672,7 +780,7 @@ if __name__ == '__main__':
 #     return
 
 
-'''
+
 if __name__ == '__main__':
 
     """
