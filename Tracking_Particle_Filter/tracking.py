@@ -14,9 +14,13 @@ import plotly.plotly as py
 import plotly.graph_objs as go
 plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
 from sys import platform as sys_pf
-import matplotlib
-matplotlib.use("TkAgg")
-from matplotlib import pyplot as plt
+# import matplotlib
+# matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
+# import matplotlib.animation as animation
+from IPython.display import IFrame
+
+
 from numpy import outer
 import math
 
@@ -493,6 +497,7 @@ def visualize_trajectory(rotation_matrices):
             size=12,
             line=dict(
                 color='rgba(217, 217, 217, 0.14)',
+
                 width=0.1
             ),
             opacity=0.8
@@ -511,11 +516,43 @@ def visualize_trajectory(rotation_matrices):
     )
     fig = go.Figure(data=data2, layout=layout)
     py.iplot(fig, filename='simple-3d-scatter', fileopt='extend')
-
+    #
     # ax = plt.axes(projection='3d')
     # ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
     # ax.scatter3D([1], [0], [0], 'b')
     # plt.show()
+
+def online_plotting(new_matrix):
+
+    vec = np.array([1, 0, 0]).T
+    vecM = np.dot(new_matrix, vec)
+    rotX = vecM[0]
+    rotY = vecM[1]
+    rotZ = vecM[2]
+
+    ax = plt.axes(projection='3d')
+    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
+    # ax.scatter3D([1], [0], [0], 'b')
+    plt.show()
+
+def plot_unitsphere_matplot():
+    r = 1
+    pi = np.pi
+    cos = np.cos
+    sin = np.sin
+    phi, theta = np.mgrid[0.0:pi:100j, 0.0:2.0 * pi:100j]
+    x = r * sin(phi) * cos(theta)
+    y = r * sin(phi) * sin(theta)
+    z = r * cos(phi)
+
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+
+    ax.plot_surface(
+        x, y, z, rstride=1, cstride=1, color='c', alpha=0.6, linewidth=0)
+    plt.show()
+
+
 
 def plot_unitsphere():
     '''
@@ -543,7 +580,7 @@ def plot_unitsphere():
         marker=dict(
             size=12,
             line=dict(
-                color='rgba(217, 217, 217, 0.14)',
+                color = ['hsl('+str(h)+',50%'+',50%)' for h in np.linspace(0, 360, 1)],
                 width=0.1
             ),
             opacity=0.8
@@ -566,6 +603,8 @@ def plot_unitsphere():
 
 def run():
     # num_particles = 20
+
+    plot_unitsphere_matplot()
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
@@ -615,19 +654,20 @@ def run():
         particles = motion_update(particles, tau=dt_batch)
 
         mean_of_rotations.loc[batch_nr] = [new_rotation]
-        visualize_trajectory(mean_of_rotations['Rotation'])
+        # visualize_trajectory(mean_of_rotations['Rotation'])
 
 
     print(batch_nr)
     print(event_nr)
-    #visualize_trajectory(mean_of_rotations['Rotation'])
+    visualize_trajectory(mean_of_rotations['Rotation'])
 
     print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
 
 if __name__ == '__main__':
-     # run()
+    # run()
     plot_unitsphere()
+    # plot_unitsphere_matplot()
 
 
 #########TESTING
