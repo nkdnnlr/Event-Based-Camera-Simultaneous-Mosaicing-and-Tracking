@@ -7,7 +7,7 @@ import pandas as pd
 import scipy.linalg as sp
 import math
 import sys
-import matplotlib.pyplot as plt
+
 from mpl_toolkits.mplot3d import Axes3D
 import plotly
 import plotly.plotly as py
@@ -15,12 +15,9 @@ import plotly.graph_objs as go
 # plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
 plotly.tools.set_credentials_file(username='joelba', api_key='08Fb4jIrJRMdPWG1lWop')
 from sys import platform as sys_pf
-# import matplotlib
-# matplotlib.use("TkAgg")
+import matplotlib
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-# import matplotlib.animation as animation
-from IPython.display import IFrame
-
 
 from numpy import outer
 import math
@@ -460,7 +457,10 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
 
+    visualize_trajectory(particles['Rotation'])
 
+
+    '''
     random_x = np.random.randn(400)
     random_y = np.random.randn(400)
 
@@ -472,10 +472,11 @@ def mean_of_resampled_particles(particles):
     data = [trace]
     # Plot and embed in ipython notebook!
     plot_url = py.plot(data, filename='basic-line')
+    '''
 
     return mean
 
-def visualize_trajectory(rotation_matrices):
+def visualize_particles(rotation_matrices):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
 
@@ -490,6 +491,7 @@ def visualize_trajectory(rotation_matrices):
     rotY = vecM.str.get(1)
     rotZ = vecM.str.get(2)
 
+    '''
     trace1 = go.Scatter3d(
         x=rotX,
         y=rotY,
@@ -516,13 +518,15 @@ def visualize_trajectory(rotation_matrices):
             t=0
         )
     )
-    fig = go.Figure(data=data2, layout=layout)
-    py.iplot(fig, filename='simple-3d-scatter', fileopt='extend')
-    #
-    # ax = plt.axes(projection='3d')
-    # ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
-    # ax.scatter3D([1], [0], [0], 'b')
-    # plt.show()
+
+    #fig = go.Figure(data=data2, layout=layout)
+    #py.plot(fig, filename='simple-3d-scatter', fileopt='extend')
+    '''
+
+    ax = plt.axes(projection='3d')
+    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
+    ax.scatter3D([1], [0], [0], 'b')
+    plt.show()
 
 def online_plotting(new_matrix):
 
@@ -553,7 +557,6 @@ def plot_unitsphere_matplot():
     ax.plot_surface(
         x, y, z, rstride=1, cstride=1, color='c', alpha=0.6, linewidth=0)
     plt.show()
-
 
 
 def plot_unitsphere():
@@ -616,7 +619,7 @@ def rotmat2quaternion(rotmat):
 def run():
     # num_particles = 20
 
-    plot_unitsphere_matplot()
+    # plot_unitsphere_matplot()
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
@@ -678,8 +681,8 @@ def run():
     print("Done")
 
 if __name__ == '__main__':
-    # run()
-    plot_unitsphere()
+    run()
+    # plot_unitsphere()
     # plot_unitsphere_matplot()
 
 
