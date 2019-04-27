@@ -26,9 +26,9 @@ intensity_map = np.load('../output/intensity_map.npy')
 
 
 # Constants
-num_particles = 10
-num_events_batch = 300
-tau=7000
+num_particles = 100
+num_events_batch = 500
+# tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
 sigma = 8.0*10**(-2)
@@ -97,6 +97,7 @@ def event_and_particles_to_angles(event, particles, calibration):
     :param calibration: camera calibration
     :return: DataFrame with particles as rows and angles as columns.
     """
+
     event_times_K = np.dot(np.linalg.inv(calibration), np.array([[event['x']], [event['y']], [1]])) #from camera frame (u,v) to world reference frame
     coordinates = ['r_w1', 'r_w2', 'r_w3']
     # df_coordinates = pd.DataFrame()
@@ -119,6 +120,7 @@ def event_and_particles_to_angles(event, particles, calibration):
 
     return particles
     # return df_angles
+
 
 def event_and_oneparticle_to_angles(event, particle, calibration):
     """
@@ -183,8 +185,6 @@ def angles2map_series(particle, height=1024, width=2048):
     return particle
 
 
-
-
 def particles_per_event2map(event, particles, calibration):
     """
     For each event, gets map angles and coordinates (for on panoramic image)
@@ -197,6 +197,7 @@ def particles_per_event2map(event, particles, calibration):
     particles = angles2map_df(particles)
     particles['pol'] = event['pol']
     return particles
+
 
 def oneparticle_per_event2map(event, particle, calibration):
     """
@@ -268,8 +269,6 @@ def init_particles(N, unit=False, seed=None):
 
 ##initialize num_particles particles
 
-
-
 def motion_update(particles, tau):
     """
 
@@ -298,7 +297,6 @@ def motion_update(particles, tau):
                                     + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
     return updated_particles
 
-
 def initialize_sensortensor(sensor_height, sensor_width):
     """
     Initializes sensortensor, which is a
@@ -315,7 +313,6 @@ def initialize_sensortensor(sensor_height, sensor_width):
     sensortensor = np.array([sensortensor_t, sensortensor_tc])
     return sensortensor
 
-
 def update_sensortensor(sensortensor, event):
     """
     Updates sensortensor for each event. Saves event at t and t-t_c
@@ -329,7 +326,6 @@ def update_sensortensor(sensortensor, event):
     sensortensor[1][y, x] = sensortensor[0][y, x]
     sensortensor[0][y, x] = (event['t'], event['pol'])
     return
-
 
 def get_latest_particles(t_asked, particles_all_time):
     """
@@ -345,7 +341,6 @@ def get_latest_particles(t_asked, particles_all_time):
     # dt_pos_inv = 1. / dt_pos
     # t_particles = math.floor(t_asked * dt_pos_inv) / dt_pos
     return particles_all_time[particles_all_time['t'] <= t_asked].iloc[-1]
-
 
 def get_intensity_from_gradientmap(gradientmap, u, v):
     """
@@ -373,8 +368,6 @@ def event_likelihood(z, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     """
     y = k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(z - mu) ** 2 / (2 * sigma) ** 2)
     return y
-
-
 
 def measurement_update(events_batch,
                        particles,
@@ -407,7 +400,6 @@ def measurement_update(events_batch,
     particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x))  ##not tested, probably wrong
     return particles
 
-
 def normalize_particle_weights(particles):
     '''
     normalizes particle weights
@@ -416,7 +408,6 @@ def normalize_particle_weights(particles):
     '''
     particles['Weight'] = particles['Weight']/particles['Weight'].sum()
     return particles
-
 
 def resampling(particles):
     #TODO: Check if it really does what it should. Looks really scary with the if-conditions.
@@ -453,7 +444,6 @@ def resampling(particles):
 
     return resampled_particles
 
-
 def mean_of_resampled_particles(particles):
     '''
     TODO: Does too much computations: gets matrix for every particle for every particle ;)
@@ -465,8 +455,21 @@ def mean_of_resampled_particles(particles):
         rotmats[i] = sp.logm(particles['Rotation'].as_matrix()[i])
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
-    return mean
 
+
+    random_x = np.random.randn(400)
+    random_y = np.random.randn(400)
+
+    trace = go.Scatter(
+        x=random_x,
+        y=random_y,
+        mode='markers'
+    )
+    data = [trace]
+    # Plot and embed in ipython notebook!
+    plot_url = py.plot(data, filename='basic-line')
+
+    return mean
 
 def visualize_trajectory(rotation_matrices):
     """
@@ -482,8 +485,6 @@ def visualize_trajectory(rotation_matrices):
     rotX = vecM.str.get(0)
     rotY = vecM.str.get(1)
     rotZ = vecM.str.get(2)
-
-
 
     trace1 = go.Scatter3d(
         x=rotX,
@@ -563,6 +564,16 @@ def plot_unitsphere():
     fig = go.Figure(data=data2, layout=layout)
     py.iplot(fig, filename='simple-3d-scatter', fileopt='extend')
 
+def rotmat2quaternion(rotmat):
+    '''
+    :param rotmat: 3x3 Rotation matrix
+    :return: quaternion in form: (qx,qy,qz,qw)
+    '''
+    qw=np.sqrt( 1+rotmat[0][0]+rotmat[1][1]+rotmat[2][2])/2
+    qx = (rotmat[2][1]-rotmat[1][2]/(4*qw))
+    qy = (rotmat[0][2]-rotmat[2][0]/(4*qw))
+    qz = (rotmat[1][0]-rotmat[0][1]/(4*qw))
+    return qx, qy, qz, qw
 
 
 def run():
@@ -570,7 +581,7 @@ def run():
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
-    events, num_events = load_events(event_file, head=3500, return_number=True)
+    events, num_events = load_events(event_file, head=10000, return_number=True)
     events = events.astype({'x': int, 'y': int})
     print(events.head()['x'])
     print("Events total: ", num_events)
@@ -609,14 +620,15 @@ def run():
         t_batch = events.loc[event_nr]['t']
 
         new_rotation = mean_of_resampled_particles(particles)
+
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
-        print("Rotations: ", all_rotations)
+        print("time: ", t_batch, "Rotations: ", rotmat2quaternion(new_rotation))
 
         particles = motion_update(particles, tau=dt_batch)
 
         mean_of_rotations.loc[batch_nr] = [new_rotation]
-        visualize_trajectory(mean_of_rotations['Rotation'])
+        #visualize_trajectory(mean_of_rotations['Rotation'])
 
 
     print(batch_nr)
@@ -627,9 +639,8 @@ def run():
     print("Done")
 
 if __name__ == '__main__':
-     # run()
-    plot_unitsphere()
-
+    run()
+    # plot_unitsphere()
 
 #########TESTING
 
@@ -669,18 +680,6 @@ if __name__ == '__main__':
     # resampled_particles['Weight'] = resampled_particles['Weight'].astype(object)
     # resampled_particles = resampled_particles.reset_index(drop=True)
     # print(resampled_particles)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
