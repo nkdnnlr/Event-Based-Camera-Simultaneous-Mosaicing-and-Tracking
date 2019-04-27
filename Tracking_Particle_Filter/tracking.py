@@ -13,7 +13,7 @@ import plotly
 import plotly.plotly as py
 import plotly.graph_objs as go
 # plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
-plotly.tools.set_credentials_file(username='joelba', api_key='08Fb4jIrJRMdPWG1lWop')
+# plotly.tools.set_credentials_file(username='joelba', api_key='08Fb4jIrJRMdPWG1lWop')
 from sys import platform as sys_pf
 import matplotlib
 matplotlib.use("TkAgg")
@@ -29,8 +29,8 @@ intensity_map = np.load('../output/intensity_map.npy')
 
 
 # Constants
-num_particles = 100
-num_events_batch = 500
+num_particles = 50
+num_events_batch = 300
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
@@ -287,7 +287,7 @@ def motion_update(particles, tau):
     # TODO: update sigma and tau!!
     sigma1 = 2.3e-8
     sigma2 = 5.0e-6
-    sigma3 = 7e-5
+    sigma3 = 7e-5*1000000
     # p_u=[]
     # for i in range(len(particles)):
         # n1 = np.random.normal(0.0, sigma1**2 * tau)
@@ -295,8 +295,8 @@ def motion_update(particles, tau):
         # n3 = np.random.normal(0.0, sigma3**2 * tau)
         # p_u.append(np.dot(particle[i], sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))))
     updated_particles['Rotation'] = updated_particles['Rotation'].apply(
-        lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma1**2 * tau), G1)
-                                    + np.dot(np.random.normal(0.0, sigma2**2 *tau), G2)
+        lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma3**2 * tau), G1)
+                                    + np.dot(np.random.normal(0.0, sigma3**2 *tau), G2)
                                     + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
     return updated_particles
 
@@ -459,7 +459,7 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
 
-    visualize_particles(particles['Rotation'],mean=mean)
+    # visualize_particles(particles['Rotation'],mean=mean)
 
 
     '''
@@ -494,67 +494,11 @@ def visualize_particles(rotation_matrices, mean=None):
     rotY = vecM.str.get(1)
     rotZ = vecM.str.get(2)
 
-    '''
-    trace1 = go.Scatter3d(
-        x=rotX,
-        y=rotY,
-        z=rotZ,
-        mode='markers',
-        marker=dict(
-            size=12,
-            line=dict(
-                color='rgba(217, 217, 217, 0.14)',
-
-    #
-    # trace1 = go.Scatter3d(
-    #     x=rotX,
-    #     y=rotY,
-    #     z=rotZ,
-    #     mode='markers',
-    #     marker=dict(
-    #         size=12,
-    #         line=dict(
-    #             color='rgba(217, 217, 217, 0.14)',
-    #
-    #             width=0.1
-    #         ),
-    #         opacity=0.8
-    #     )
-    # )
-    #
-    #
-    # data2 = [trace1]
-    # layout = go.Layout(
-    #     margin=dict(
-    #         l=0,
-    #         r=0,
-    #         b=0,
-    #         t=0
-    #     )
-    # )
-    # fig = go.Figure(data=data2, layout=layout)
-    # py.iplot(fig, filename='simple-3d-scatter', fileopt='extend')
-    #
-    ax = plt.axes(projection='3d')
-    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
-
-    if mean=None:
-
-    data2 = [trace1]
-    layout = go.Layout(
-        margin=dict(
-            l=0,
-            r=0,
-            b=0,
-            t=0
-        )
-    )
-
-    #fig = go.Figure(data=data2, layout=layout)
-    #py.plot(fig, filename='simple-3d-scatter', fileopt='extend')
-    '''
 
     ax = plt.axes(projection='3d')
+    ax.set_xlim3d(-1, 1)
+    ax.set_ylim3d(-1, 1)
+    ax.set_zlim3d(-1, 1)
     ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
     mean_vec = np.dot(mean, vec)
     ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
@@ -617,7 +561,7 @@ def run():
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
-    particles = init_particles(num_particles, unit=True)
+    particles = init_particles(num_particles)
     sensortensor = initialize_sensortensor(128, 128)
     # print(particles)
 
@@ -662,16 +606,13 @@ def run():
 
     print(batch_nr)
     print(event_nr)
-    visualize_particles(mean_of_rotations['Rotation'], )
+    visualize_particles(mean_of_rotations['Rotation'], mean = np.eye(3))
 
-    print("Time passed: {} sec".format(round(time.time() - starttime)))<
+    print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
 
 if __name__ == '__main__':
     run()
-    # plot_unitsphere()
-    # plot_unitsphere_matplot()
-
 
 #########TESTING
 
