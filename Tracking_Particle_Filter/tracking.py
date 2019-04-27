@@ -459,7 +459,7 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
 
-    visualize_particles(particles['Rotation'])
+    visualize_particles(particles['Rotation'],mean=mean)
 
 
     '''
@@ -556,11 +556,8 @@ def visualize_particles(rotation_matrices, mean=None):
 
     ax = plt.axes(projection='3d')
     ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
-    if mean == None:
-        ax.scatter3D([1], [0], [0], 'b')
-    else:
-        mean_vec = np.dot(mean, vec)
-        ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+    mean_vec = np.dot(mean, vec)
+    ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
 
     plt.show()
 
@@ -620,7 +617,7 @@ def run():
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
-    particles = init_particles(num_particles)
+    particles = init_particles(num_particles, unit=True)
     sensortensor = initialize_sensortensor(128, 128)
     # print(particles)
 
