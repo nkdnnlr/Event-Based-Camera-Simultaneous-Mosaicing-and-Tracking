@@ -459,7 +459,7 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
 
-    visualize_particles(particles['Rotation'])
+    visualize_particles(particles['Rotation'],mean=mean)
 
 
     '''
@@ -555,12 +555,9 @@ def visualize_particles(rotation_matrices, mean=None):
     '''
 
     ax = plt.axes(projection='3d')
-    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
-    if mean == None:
-        ax.scatter3D([1], [0], [0], 'b')
-    else:
-        mean_vec = np.dot(mean, vec)
-        ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
+    mean_vec = np.dot(mean, vec)
+    ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
 
     plt.show()
 
@@ -593,7 +590,6 @@ def plot_unitsphere_matplot():
     ax.plot_surface(
         x, y, z, rstride=1, cstride=1, color='c', alpha=0.6, linewidth=0)
     plt.show()
-
 
 def plot_unitsphere():
     '''
@@ -665,7 +661,7 @@ def run():
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
-    particles = init_particles(num_particles)
+    particles = init_particles(num_particles, unit=True)
     sensortensor = initialize_sensortensor(128, 128)
     # print(particles)
 
