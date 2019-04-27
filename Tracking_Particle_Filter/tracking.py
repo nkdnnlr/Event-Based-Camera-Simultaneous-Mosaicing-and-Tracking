@@ -19,7 +19,6 @@ from sys import platform as sys_pf
 # matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 # import matplotlib.animation as animation
-from IPython.display import IFrame
 
 
 from numpy import outer
@@ -472,7 +471,7 @@ def mean_of_resampled_particles(particles):
     return mean
 
 
-def visualize_trajectory(rotation_matrices):
+def visualize_trajectory(rotation_matrices, mean=None):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
 
@@ -488,40 +487,47 @@ def visualize_trajectory(rotation_matrices):
     rotZ = vecM.str.get(2)
 
 
-
-    trace1 = go.Scatter3d(
-        x=rotX,
-        y=rotY,
-        z=rotZ,
-        mode='markers',
-        marker=dict(
-            size=12,
-            line=dict(
-                color='rgba(217, 217, 217, 0.14)',
-
-                width=0.1
-            ),
-            opacity=0.8
-        )
-    )
-
-
-    data2 = [trace1]
-    layout = go.Layout(
-        margin=dict(
-            l=0,
-            r=0,
-            b=0,
-            t=0
-        )
-    )
-    fig = go.Figure(data=data2, layout=layout)
-    py.iplot(fig, filename='simple-3d-scatter', fileopt='extend')
     #
-    # ax = plt.axes(projection='3d')
-    # ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
-    # ax.scatter3D([1], [0], [0], 'b')
-    # plt.show()
+    # trace1 = go.Scatter3d(
+    #     x=rotX,
+    #     y=rotY,
+    #     z=rotZ,
+    #     mode='markers',
+    #     marker=dict(
+    #         size=12,
+    #         line=dict(
+    #             color='rgba(217, 217, 217, 0.14)',
+    #
+    #             width=0.1
+    #         ),
+    #         opacity=0.8
+    #     )
+    # )
+    #
+    #
+    # data2 = [trace1]
+    # layout = go.Layout(
+    #     margin=dict(
+    #         l=0,
+    #         r=0,
+    #         b=0,
+    #         t=0
+    #     )
+    # )
+    # fig = go.Figure(data=data2, layout=layout)
+    # py.iplot(fig, filename='simple-3d-scatter', fileopt='extend')
+    #
+    ax = plt.axes(projection='3d')
+    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
+
+    if mean=None:
+
+        ax.scatter3D([1], [0], [0], 'b')
+    else:
+        mean_vec = np.dot(mean, vec)
+        ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+
+    plt.show()
 
 def online_plotting(new_matrix):
 
@@ -581,7 +587,7 @@ def plot_unitsphere():
         marker=dict(
             size=12,
             line=dict(
-                color = ['hsl('+str(h)+',50%'+',50%)' for h in np.linspace(0, 360, 1)],
+                color='rgba(217, 217, 217, 0.14)',
                 width=0.1
             ),
             opacity=0.8
@@ -605,7 +611,7 @@ def plot_unitsphere():
 def run():
     # num_particles = 20
 
-    plot_unitsphere_matplot()
+    # plot_unitsphere_matplot()
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
