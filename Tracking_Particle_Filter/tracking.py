@@ -555,7 +555,7 @@ def visualize_particles(rotation_matrices, mean=None):
     '''
 
     ax = plt.axes(projection='3d')
-    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='Greens')
+    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
     if mean == None:
         ax.scatter3D([1], [0], [0], 'b')
     else:
@@ -594,51 +594,6 @@ def plot_unitsphere_matplot():
         x, y, z, rstride=1, cstride=1, color='c', alpha=0.6, linewidth=0)
     plt.show()
 
-
-def plot_unitsphere():
-    '''
-
-    :return:
-    '''
-    rotmat = pd.DataFrame(columns=['Rotation'])
-    for i in range(0, 100):
-        rotmat.loc[i] = [generate_random_rotmat(unit=False)]
-
-
-    vec = np.array([1, 0, 0]).T
-    vecM = rotmat['Rotation'].apply(lambda x: np.dot([x], vec))
-    vecM = vecM.str.get(0)
-    rotX = vecM.str.get(0)
-    rotY = vecM.str.get(1)
-    rotZ = vecM.str.get(2)
-
-
-    trace1 = go.Scatter3d(
-        x=rotX,
-        y=rotY,
-        z=rotZ,
-        mode='markers',
-        marker=dict(
-            size=12,
-            line=dict(
-                color='rgba(217, 217, 217, 0.14)',
-                width=0.1
-            ),
-            opacity=0.8
-        )
-    )
-
-    data2 = [trace1]
-    layout = go.Layout(
-        margin=dict(
-            l=0,
-            r=0,
-            b=0,
-            t=0
-        )
-    )
-    fig = go.Figure(data=data2, layout=layout)
-    py.iplot(fig, filename='simple-3d-scatter', fileopt='extend')
 
 def rotmat2quaternion(rotmat):
     '''
@@ -706,12 +661,11 @@ def run():
         particles = motion_update(particles, tau=dt_batch)
 
         mean_of_rotations.loc[batch_nr] = [new_rotation]
-        # visualize_trajectory(mean_of_rotations['Rotation'])
 
 
     print(batch_nr)
     print(event_nr)
-    visualize_trajectory(mean_of_rotations['Rotation'])
+    visualize_particles(mean_of_rotations['Rotation'], )
 
     print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
