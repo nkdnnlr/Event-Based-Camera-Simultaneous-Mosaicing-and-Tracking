@@ -30,7 +30,7 @@ intensity_map = np.load('../output/intensity_map.npy')
 
 # Constants
 num_particles = 100
-num_events_batch = 500
+num_events_batch = 5000
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
@@ -40,8 +40,6 @@ sensor_height = 128
 sensor_width = 128
 image_height = 1024
 image_width = 2*image_height
-
-
 
 def camera_intrinsics():
     '''
@@ -56,7 +54,6 @@ def camera_intrinsics():
 
     K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
     return K
-
 
 def load_events(filename, head=None, return_number=False):
     """
@@ -296,8 +293,11 @@ def motion_update(particles, tau):
         # p_u.append(np.dot(particle[i], sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))))
     updated_particles['Rotation'] = updated_particles['Rotation'].apply(
         lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma1**2 * tau), G1)
-                                    + np.dot(np.random.normal(0.0, sigma2**2 *tau), G2)
+                                    + np.dot(np.random.normal(0.0, sigma3**2 *tau), G2)
                                     + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
+
+    print(updated_particles['Rotation'])
+
     return updated_particles
 
 def initialize_sensortensor(sensor_height, sensor_width):
@@ -458,24 +458,6 @@ def mean_of_resampled_particles(particles):
         rotmats[i] = sp.logm(particles['Rotation'].as_matrix()[i])
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
-
-    visualize_particles(particles['Rotation'],mean=mean)
-
-
-    '''
-    random_x = np.random.randn(400)
-    random_y = np.random.randn(400)
-
-    trace = go.Scatter(
-        x=random_x,
-        y=random_y,
-        mode='markers'
-    )
-    data = [trace]
-    # Plot and embed in ipython notebook!
-    plot_url = py.plot(data, filename='basic-line')
-    '''
-
     return mean
 
 
@@ -617,7 +599,7 @@ def run():
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
-    particles = init_particles(num_particles, unit=True)
+    particles = init_particles(num_particles, unit=False)
     sensortensor = initialize_sensortensor(128, 128)
     # print(particles)
 
@@ -651,6 +633,9 @@ def run():
 
         new_rotation = mean_of_resampled_particles(particles)
 
+        visualize_particles(particles['Rotation'], new_rotation)
+
+
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
         print("time: ", t_batch, "Rotations: ", rotmat2quaternion(new_rotation))
@@ -662,7 +647,7 @@ def run():
 
     print(batch_nr)
     print(event_nr)
-    visualize_particles(mean_of_rotations['Rotation'], )
+    # visualize_particles(mean_of_rotations['Rotation'], )
 
     print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
