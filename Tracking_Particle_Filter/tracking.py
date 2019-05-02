@@ -13,7 +13,6 @@ from mpl_toolkits.mplot3d import Axes3D
 # import plotly.plotly as py
 # import plotly.graph_objs as go
 # plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
-# plotly.tools.set_credentials_file(username='joelba', api_key='08Fb4jIrJRMdPWG1lWop')
 from sys import platform as sys_pf
 import matplotlib
 matplotlib.use("TkAgg")
@@ -48,18 +47,16 @@ def camera_intrinsics():
     in: -
     out: Camera intrinsic Matrix K
     '''
-    # f_x = 115.534  # x-focal length
-    # s = 0  # Skewness
-    # x_0 = 79.262
-    # f_y = 115.565  # y-focal length
-    # y_0 = 65.531
-    #
-    # K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
-    K = [[91.4014729896821, 0.0, 64.0],
-    [0.0, 91.4014729896821, 64.0],
-    [0.0, 0.0, 1.6]]
-    return K
+    f_x = 115.534  # x-focal length
+    s = 0  # Skewness
+    x_0 = 79.262
+    f_y = 115.565  # y-focal length
+    y_0 = 65.531
 
+    # K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
+    K = np.array([[91.4014729896821, 0.0, 64.0], [0.0, 91.4014729896821, 64.0], [0, 0, 1]]) #as per guillermo's suggestion
+
+    return K
 
 def load_events(filename, head=None, return_number=False):
     """
@@ -127,7 +124,6 @@ def event_and_particles_to_angles(event, particles, calibration):
     return particles
     # return df_angles
 
-
 def event_and_oneparticle_to_angles(event, particle, calibration):
     """
     For a given event, generates dataframe
@@ -153,16 +149,17 @@ def angles2map(theta, phi, height=1024, width=2048):
     """
     Converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
     to integer map points (pixel coordinates)
+    Todo: Check v
     :param theta:
     :param phi:
     :param height: height of image in pixels
     :param width: width of image in pixels
     :return: tuple with integer map points (pixel coordinates)
     """
-    v = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))+height
+    # v = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))+height
+    v = np.floor((np.pi / 2 - phi) / np.pi * height) # jb's version
     u = np.floor((theta + np.pi)/(2*np.pi)*width)
     return v, u
-
 
 def angles2map_df(particles, height=1024, width=2048):
     """
@@ -191,7 +188,6 @@ def angles2map_series(particle, height=1024, width=2048):
     particle['u'] = np.floor((particle['theta'] + np.pi)/(2*np.pi)*width)
     return particle
 
-
 def particles_per_event2map(event, particles, calibration):
     """
     For each event, gets map angles and coordinates (for on panoramic image)
@@ -204,7 +200,6 @@ def particles_per_event2map(event, particles, calibration):
     particles = angles2map_df(particles)
     particles['pol'] = event['pol']
     return particles
-
 
 def oneparticle_per_event2map(event, particle, calibration):
     """
@@ -220,7 +215,6 @@ def oneparticle_per_event2map(event, particle, calibration):
     particle['u'] = u
     particle['pol'] = event['pol']
     return particle
-
 
 def generate_random_rotmat(unit=False, seed=None):
     """
@@ -247,7 +241,6 @@ def generate_random_rotmat(unit=False, seed=None):
         M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
 
     return M
-
 
 def init_particles(N, unit=False, seed=None):
     '''
@@ -316,6 +309,7 @@ def initialize_sensortensor(sensor_height, sensor_width):
     :param sensor_width:
     :return: initial sensortensor np.array([.. ])->128*128 pixels
     """
+
     sensortensor_t = np.zeros((sensor_height, sensor_width),
                           dtype=[('time', 'f8'), ('polarity', 'i4')])
     sensortensor_tc = np.zeros((sensor_height, sensor_width),
@@ -541,7 +535,6 @@ def plot_unitsphere_matplot():
     ax.plot_surface(
         x, y, z, rstride=1, cstride=1, color='c', alpha=0.6, linewidth=0)
     plt.show()
-
 
 def rotmat2quaternion(rotmat):
     '''
