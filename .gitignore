@@ -2,3 +2,5 @@
 *.iml
 sample.test.py
 output/animation/*
+*.bag
+
