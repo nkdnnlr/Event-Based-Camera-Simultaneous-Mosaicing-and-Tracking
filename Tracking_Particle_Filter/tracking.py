@@ -30,8 +30,8 @@ intensity_map = np.load('../output/intensity_map.npy')
 
 # Constants
 num_particles = 50
-num_events_batch = 300
-total_nr_events_considered = 3500
+num_events_batch = 500
+total_nr_events_considered = 10000
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
@@ -292,7 +292,7 @@ def motion_update(particles, tau, seed=None):
     # TODO: update sigma and tau!!
     sigma1 = 2.3e-8
     sigma2 = 5.0e-6
-    sigma3 = 7e-5*1000000
+    sigma3 = 7.0e-5
     # p_u=[]
     # for i in range(len(particles)):
         # n1 = np.random.normal(0.0, sigma1**2 * tau)
@@ -557,9 +557,15 @@ def rotmat2quaternion(rotmat):
     return qx, qy, qz, qw
 
 def write_quaternions2file(allrotations):
-    allrotations['Rotation'].apply(lambda x: rotmat2quaternion(x))
+    quaternions = pd.DataFrame(columns = ['t','qx','qy','qz','qw'])
+    quaternion = allrotations['Rotation'].apply(lambda x: rotmat2quaternion(x))
 
-    allrotations.to_csv(r'quaternions.txt', header=None, index=None, sep=' ', mode='a')
+    quaternions['t'] = allrotations['t']
+    quaternions['qx'] = quaternion.str.get(0)
+    quaternions['qy'] = quaternion.str.get(1)
+    quaternions['qz'] = quaternion.str.get(2)
+    quaternions['qw'] = quaternion.str.get(3)
+    quaternions.to_csv(r'quaternions.txt', index=None, sep=' ', mode='a')
 
 
 def run():
