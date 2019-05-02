@@ -25,9 +25,9 @@ import sample.helpers as helpers
 from numpy import outer
 import math
 
-event_file = '../data/synth1/events.txt'
-intensity_map = np.load('../output/intensity_map.npy')
 data_dir = '../data/synth1'
+intensity_map = np.load('../output/intensity_map.npy')
+event_file = os.path.join(data_dir, 'events.txt')
 filename_poses = os.path.join(data_dir, 'poses.txt')
 
 
@@ -369,21 +369,23 @@ def get_intensity_from_gradientmap(gradientmap, u, v):
     """
     return gradientmap[v, u]
 
-def event_likelihood(z, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
+def event_likelihood(z, event, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     """
     For a given absolute log intensity difference z,
     returns the likelihood of an event.
     likelihood = gaussian distribution + noise
-    TODO: What about negative values?
-    TODO: If z negative but event positive, cancel!
+    TODO: What about negative values? -> Done. test!!
+    TODO: If z negative but event positive, cancel! -> Done, test!!
     :param z: log intensity difference
     :param mu: mean
     :param sigma: standard deviation
     :param k_e: minimum constant / noise
     :return: event-likelihood (scalar)
     """
-    y = k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(z - mu) ** 2 / (2 * sigma) ** 2)
-    return y
+    if np.sign(z) == np.sign(event['pol']):
+        return k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(np.abs(z) - mu) ** 2 / (2 * sigma) ** 2)
+    else:
+        return k_e
 
 def measurement_update(events_batch,
                        particles,
@@ -411,8 +413,8 @@ def measurement_update(events_batch,
         v_ttc = particle_ttc['v']
         particles['logintensity_ttc'] = intensity_map[int(v_ttc), int(u_ttc)]
         particles['logintensity_t'] = particles.apply(lambda row: intensity_map[int(row.v-1), int(row.u-1)], axis=1)
-        particles['z'] = abs(particles['logintensity_t'] - particles['logintensity_ttc'])
-        particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z)], axis=1)
+        particles['z'] = particles['logintensity_t'] - particles['logintensity_ttc']
+        particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z, event)], axis=1)
     particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x)) #Tested
     return particles
 
