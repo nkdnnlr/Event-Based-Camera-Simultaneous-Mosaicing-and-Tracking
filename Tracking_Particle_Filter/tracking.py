@@ -9,9 +9,9 @@ import math
 import sys
 
 from mpl_toolkits.mplot3d import Axes3D
-import plotly
-import plotly.plotly as py
-import plotly.graph_objs as go
+# import plotly
+# import plotly.plotly as py
+# import plotly.graph_objs as go
 # plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
 # plotly.tools.set_credentials_file(username='joelba', api_key='08Fb4jIrJRMdPWG1lWop')
 from sys import platform as sys_pf
@@ -31,7 +31,7 @@ intensity_map = np.load('../output/intensity_map.npy')
 # Constants
 num_particles = 50
 num_events_batch = 300
-total_nr_events_considered = 3500
+total_nr_events_considered = 350000
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
@@ -166,6 +166,7 @@ def angles2map(theta, phi, height=1024, width=2048):
 
 def angles2map_df(particles, height=1024, width=2048):
     """
+    USED FOR COLLECTION OF PARTICLES
     For DataFrame particles, converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
     to integer map points (pixel coordinates)
     :param particles: DataFrame
@@ -252,7 +253,6 @@ def init_particles(N, unit=False, seed=None):
     '''
     in: # particles num_particles
     out: data frame with Index, Rotation matrix and weight
-    TODO: Add time to particle. For example, make particles every 1/1000 s. We will need to save particles somewhere.
     '''
 
     # p0 = np.eye(3)      #initial rotation matrix of particles
@@ -260,7 +260,6 @@ def init_particles(N, unit=False, seed=None):
     df['Rotation'] = df['Rotation'].astype(object)
     w0 = 1/N
     for i in range(N):
-        # TODO: random seed is fixed now. Change again!
         df.at[i, ['Rotation']] = [generate_random_rotmat(unit=unit, seed=seed)]
         df.at[i, ['Weight']] = float(w0)
     return df
@@ -301,7 +300,7 @@ def motion_update(particles, tau, seed=None):
         # p_u.append(np.dot(particle[i], sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))))
     updated_particles['Rotation'] = updated_particles['Rotation'].apply(
         lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma3**2 * tau), G1)
-                                    + np.dot(np.random.normal(0.0, sigma3**2 *tau), G2)
+                                    + np.dot(np.random.normal(0.0, sigma3**2 * tau), G2)
                                     + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
 
     print(updated_particles['Rotation'])
@@ -368,7 +367,6 @@ def event_likelihood(z, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     For a given absolute log intensity difference z,
     returns the likelihood of an event.
     likelihood = gaussian distribution + noise
-    TODO: Normalize!
     TODO: What about negative values?
     TODO: If z negative but event positive, cancel!
     :param z: log intensity difference
@@ -387,12 +385,12 @@ def measurement_update(events_batch,
                        calibration):
     """
 
-    :param events_batch:
-    :param particles:
+    :param events_batch: events of a batch
+    :param particles: particles
     :param all_rotations: DataFrame containing one time and one rotation per batch.
     :param sensortensor:
     :param calibration:
-    :return: #TODO
+    :return: particles
     """
     particles['Weight'] = np.empty((len(particles), 0)).tolist()
     for idx, event in events_batch.iterrows():
@@ -405,10 +403,10 @@ def measurement_update(events_batch,
         u_ttc = particle_ttc['u']
         v_ttc = particle_ttc['v']
         particles['logintensity_ttc'] = intensity_map[int(v_ttc), int(u_ttc)]
-        particles['logintensity_t'] = particles.apply(lambda row: intensity_map[int(row.v), int(row.u)], axis=1)
+        particles['logintensity_t'] = particles.apply(lambda row: intensity_map[int(row.v-1), int(row.u-1)], axis=1)
         particles['z'] = abs(particles['logintensity_t'] - particles['logintensity_ttc'])
         particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z)], axis=1)
-    particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x))  ##not tested, probably wrong
+    particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x)) #Tested
     return particles
 
 def normalize_particle_weights(particles):
@@ -624,7 +622,7 @@ def run():
     print(batch_nr)
     print(event_nr)
     visualize_particles(mean_of_rotations['Rotation'], mean_value = None)
-    write_quaternions2file(all_rotations)
+    #write_quaternions2file(all_rotations)
 
     print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
