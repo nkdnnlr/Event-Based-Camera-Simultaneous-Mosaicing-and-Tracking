@@ -31,7 +31,7 @@ intensity_map = np.load('../output/intensity_map.npy')
 # Constants
 num_particles = 50
 num_events_batch = 500
-total_nr_events_considered = 10000
+total_nr_events_considered = 10001
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
@@ -507,7 +507,7 @@ def visualize_particles(rotation_matrices, mean_value=None):
     ax.set_zlim3d(-1, 1)
     ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
     if mean_value:
-        mean_vec = np.dot(mean, vec)
+        mean_vec = np.dot(mean_value, vec)
         ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
 
     plt.show()
@@ -563,7 +563,7 @@ def write_quaternions2file(allrotations):
     quaternions['qy'] = quaternion.str.get(1)
     quaternions['qz'] = quaternion.str.get(2)
     quaternions['qw'] = quaternion.str.get(3)
-    quaternions.to_csv(r'quaternions.txt', index=None, sep=' ', mode='a')
+    quaternions.to_csv(r'quaternions.txt', index=None, header=None, sep=' ', mode='a')
 
 
 def run():
@@ -628,7 +628,7 @@ def run():
     print(batch_nr)
     print(event_nr)
     visualize_particles(mean_of_rotations['Rotation'], mean_value = None)
-    #write_quaternions2file(all_rotations)
+    write_quaternions2file(all_rotations)
 
     print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
