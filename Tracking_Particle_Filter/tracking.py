@@ -2,6 +2,7 @@ import time
 import sys
 import math
 
+import os
 import numpy as np
 import pandas as pd
 import scipy.linalg as sp
@@ -18,6 +19,7 @@ import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 # import matplotlib.animation as animation
+import sample.helpers as helpers
 
 
 from numpy import outer
@@ -25,6 +27,8 @@ import math
 
 event_file = '../data/synth1/events.txt'
 intensity_map = np.load('../output/intensity_map.npy')
+data_dir = '../data/synth1'
+filename_poses = os.path.join(data_dir, 'poses.txt')
 
 
 # Constants
@@ -34,7 +38,7 @@ sigma_init1=0.1
 sigma_init2=0.1
 sigma_init3=0.1
 total_nr_events_considered = 350000
-
+first_matrix = helpers.get_first_matrix(filename_poses)
 
 
 # tau=7000
