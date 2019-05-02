@@ -31,6 +31,7 @@ intensity_map = np.load('../output/intensity_map.npy')
 # Constants
 num_particles = 50
 num_events_batch = 300
+total_nr_events_considered = 3500
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
@@ -40,21 +41,23 @@ sensor_height = 128
 sensor_width = 128
 image_height = 1024
 image_width = 2*image_height
-
-
+randomseed = None
 
 def camera_intrinsics():
     '''
     in: -
     out: Camera intrinsic Matrix K
     '''
-    f_x = 115.534  # x-focal length
-    s = 0  # Skewness
-    x_0 = 79.262
-    f_y = 115.565  # y-focal length
-    y_0 = 65.531
-
-    K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
+    # f_x = 115.534  # x-focal length
+    # s = 0  # Skewness
+    # x_0 = 79.262
+    # f_y = 115.565  # y-focal length
+    # y_0 = 65.531
+    #
+    # K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
+    K = [[91.4014729896821, 0.0, 64.0],
+    [0.0, 91.4014729896821, 64.0],
+    [0.0, 0.0, 1.6]]
     return K
 
 
@@ -66,7 +69,7 @@ def load_events(filename, head=None, return_number=False):
     """
     print("Loading Events")
     # Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
-    events = pd.read_csv(filename, delimiter=' ', header=None, names=['sec', 'nsec', 'x', 'y', 'pol'])
+    events = pd.read_csv(filename, delimiter=' ', header=head, names=['sec', 'nsec', 'x', 'y', 'pol'])
     # print("Head: \n", events.head(10))
     num_events = events.size
     print("Number of events in file: ", num_events)
@@ -272,13 +275,15 @@ def init_particles(N, unit=False, seed=None):
 
 ##initialize num_particles particles
 
-def motion_update(particles, tau):
+def motion_update(particles, tau, seed=None):
     """
 
     :param particles: DataFrame
     :param tau: timestep #TODO: is this tau in seconds?
     :return: updated particles
     """
+    if seed is not None:
+        np.random.seed(seed)
 
     updated_particles = particles.copy()  # type: object
     G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
@@ -482,7 +487,7 @@ def mean_of_resampled_particles(particles):
     return mean
 
 
-def visualize_particles(rotation_matrices, mean=None):
+def visualize_particles(rotation_matrices, mean_value=None):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
 
@@ -503,8 +508,9 @@ def visualize_particles(rotation_matrices, mean=None):
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
     ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
-    mean_vec = np.dot(mean, vec)
-    ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+    if mean_value:
+        mean_vec = np.dot(mean, vec)
+        ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
 
     plt.show()
 
@@ -550,6 +556,11 @@ def rotmat2quaternion(rotmat):
     qz = (rotmat[1][0]-rotmat[0][1]/(4*qw))
     return qx, qy, qz, qw
 
+def write_quaternions2file(allrotations):
+    allrotations['Rotation'].apply(lambda x: rotmat2quaternion(x))
+
+    allrotations.to_csv(r'quaternions.txt', header=None, index=None, sep=' ', mode='a')
+
 
 def run():
     # num_particles = 20
@@ -558,13 +569,13 @@ def run():
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
-    events, num_events = load_events(event_file, head=10000, return_number=True)
+    events, num_events = load_events(event_file, head=total_nr_events_considered, return_number=True)
     events = events.astype({'x': int, 'y': int})
     print(events.head()['x'])
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
-    particles = init_particles(num_particles)
+    particles = init_particles(num_particles, seed=randomseed)
     sensortensor = initialize_sensortensor(128, 128)
     # print(particles)
 
@@ -598,21 +609,22 @@ def run():
 
         new_rotation = mean_of_resampled_particles(particles)
 
-        visualize_particles(particles['Rotation'], new_rotation)
+        # visualize_particles(particles['Rotation'], new_rotation)
 
 
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
-        print("time: ", t_batch, "Rotations: ", rotmat2quaternion(new_rotation))
+        # print("time: ", t_batch, "Rotations: ", rotmat2quaternion(new_rotation))
 
-        particles = motion_update(particles, tau=dt_batch)
+        particles = motion_update(particles, tau=dt_batch, seed=None)
 
         mean_of_rotations.loc[batch_nr] = [new_rotation]
 
 
     print(batch_nr)
     print(event_nr)
-    visualize_particles(mean_of_rotations['Rotation'], )
+    visualize_particles(mean_of_rotations['Rotation'], mean_value = None)
+    write_quaternions2file(all_rotations)
 
     print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
@@ -661,227 +673,3 @@ if __name__ == '__main__':
     # resampled_particles['Weight'] = resampled_particles['Weight'].astype(object)
     # resampled_particles = resampled_particles.reset_index(drop=True)
     # print(resampled_particles)
-
-
-
-'''
-    calibration = camera_intrinsics()
-    event_batch = load_events(event_file, 300)
-    particles = init_particles(1, seed=1)
-    print(particles)
-    sensortensor = initialize_sensortensor(128, 128)
-
-    #
-    # measurement_update_temp(event_batch, particles,
-    #                         all_rotations, sensortensor)
-
-    # particles1 = init_particles(1)
-    # particles5 = init_particles(5)
-    # print(particles1.at[0, 'Weight'])
-    # print(particles1['Weight'].tolist())
-    # exit()
-    # particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
-    # print(particles5)
-    # exit()
-
-    fig_sensor = plt.figure(1)
-    #exit()
-    # print(event_batch['x'])
-    plt.scatter(event_batch['x'], event_batch['y'], c=event_batch['pol'])
-    plt.xlim([0, 128])
-    plt.ylim([0, 128])
-    plt.title("Sensor")
-    # plt.show()
-
-    # rotmat0 = generate_random_rotmat(0)
-    # print(rotmat0)
-
-    mappoints = []
-    u = []
-    v = []
-    pol = []
-
-    for idx, event in event_batch.iterrows():
-        # df_angles = event_and_particles_to_angles(event, particles['Rotation'], calibration)
-        df_uvp = particles_per_event2map(event, particles, calibration)[['v', 'u', 'pol']]
-
-
-        u_ = int(df_uvp['u'].tolist()[0])
-        u.append(u_)
-        v_ = int(df_uvp['v'].tolist()[0])
-        v.append(v_)
-        pol_ = df_uvp['pol'].tolist()[0]
-        pol.append(pol_)
-        intensity = get_intensity_from_gradientmap(gradientmap=intensity_map,
-                                       u=u_, v=v_)
-        # print(intensity)
-
-
-    fig_mappoints = plt.figure(2)
-    plt.scatter(u, v, c=pol)
-    plt.title("Mappoints")
-    plt.xlim([0, 2048])
-    plt.ylim([0, 1024])
-    plt.show()
-
-
-# def get_pixelmap_for_particles(event, sensortensor, particles_all_time):
-#     """
-#     Working on...
-#     :param event:
-#     :param sensortensor:
-#     :param particles_all_time:
-#     :return:
-#     """
-#     t = event['t']
-#     x = event['x']
-#     y = event['y']
-#     ttc = sensortensor[1][x,y][0]
-#
-#     particles = get_latest_particles(t_asked=t, particles_all_time=particles_all_time)
-#
-#     particles_ttc = get_latest_particles(t_asked=ttc, particles_all_time=particles_all_time)
-#
-#     particles_per_event2map(event, particles, camera_intrinsicsK)
-#
-#     pass
-
-# def update_sensortensor_from_batch(sensortensor, batch_event):
-#     """
-#     Updates sensortensor for each event. Saves event at t and t-t_c
-#     :param sensortensor: tensor sensorwidth*sensorheight*2, with tuple (t,pol) as entries
-#     :param event: Pandas DataFrame with ['t', 'x', 'y', 'pol']
-#     :return: void
-#     """
-#     for event in batch_event:
-#         x = int(event['x'])
-#         y = int(event['y'])
-#         sensortensor[1][y, x] = sensortensor[0][y, x]
-#         sensortensor[0][y, x] = (event['t'], event['pol'])
-#     return
-
-
-
-if __name__ == '__main__':
-
-    """
-    events = load_events('../data/synth1/events.txt')
-
-    # calibration = camera_intrinsics()
-    # event_batch = load_events(event_file, 300)
-    # particles = init_particles(1, unit=True)
-    # print(particles)
-    # sensortensor = initialize_sensortensor(128, 128)
-
-    #
-    # measurement_update_temp(event_batch, particles,
-    #                         all_rotations, sensortensor)
-
-    # particles1 = init_particles(1)
-    # particles5 = init_particles(5)
-    # particles5['Difference'] = particles5['Weight'] - particles1['Weight'].tolist()
-    # print(particles5)
-    # exit()
-
-    ### Testing the event stream and pixelmap. TODO: Something is flipped. Else looks alright.
-    fig_sensor = plt.figure(1)
-    plt.scatter(event_batch['x'], event_batch['y'], c=event_batch['pol'])
-    plt.xlim([0, 128])
-    plt.ylim([0, 128])
-    plt.title("Sensor")
-    plt.show()
-
-    # rotmat0 = generate_random_rotmat(0)
-    # print(rotmat0)
-
-    mappoints = []
-    u = []
-    v = []
-    pol = []
-    # exit()
-    # df_uvp = particles_per_event2map(event_batch.iloc[0], particles, calibration)[['u','v', 'pol']]
-    for idx, event in event_batch.iterrows():
-        # df_angles = event_and_particles_to_angles(event, particles['Rotation'], calibration)
-        df_uvp = particles_per_event2map(event, particles, calibration)[['v','u', 'pol']]
-        u_ = int(df_uvp['u'].tolist()[0])
-        u.append(u_)
-        v_ = int(df_uvp['v'].tolist()[0])
-        v.append(v_)
-        pol_ = df_uvp['pol'].tolist()[0]
-        pol.append(pol_)
-        intensity = get_intensity_from_gradientmap(gradientmap=intensity_map,
-                                       u=u_, v=v_)
-        print(intensity)
-
-
-    fig_mappoints = plt.figure(2)
-    plt.scatter(u, v, c=pol)
-    plt.title("Mappoints")
-    # plt.xlim([0, 2048])
-    # plt.ylim([0, 1024])
-    plt.show()
-
-
-    # sensortensor = initialize_sensortensor(128, 128)
-    # starttime = time.time()
-    # i = 0
-    # for idx, event in events.head(50000).iterrows():
-    #     # print(event)
-    #     update_sensortensor(sensortensor=sensortensor, event=event)
-    #     # i += 1
-    #     # if i >= 10:
-    #     #     break
-    # endtime = time.time() - starttime
-    # print("Endtime: ", endtime)
-    # print(sensortensor[0][0,0][0])
-    # exit()
-
-    ## Testing sensortensor
-    # event = events.loc[557]
-    # print(event)
-    # sensortensor_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # sensortensor_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # sensortensor_ttc = np.array([sensortensor_t, sensortensor_tc])
-    # print(sensortensor_ttc)
-    # update_sensortensor(sensortensor_ttc, event)
-    # print(sensortensor_ttc)
-    #
-    # ## Testing sensortensor
-    # # event = events.loc[557]
-    # # print(event)
-    # # sensortensor_t = np.zeros((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # # sensortensor_tc = np.ones((28, 28), dtype=[('time', 'f8'), ('polarity', 'i4')])
-    # # sensortensor_ttc = np.array([sensortensor_t, sensortensor_tc])
-    # # print(sensortensor_ttc)
-    # # update_sensortensor(sensortensor_ttc, event)
-    # # print(sensortensor_ttc)
-    # #
-    # # # print(sensortensor[1])
-    # # print(sensortensor_ttc[1][0,0])
-    # #
-    # #
-    #
-    #
-    #
-    # # state update step
-
-    # camera_intrinsicsK = camera_intrinsics()
-    particles= init_particles(num_particles)
-    # # print(particles)
-    # particles_per_event = event_and_particles_to_angles(events.loc[0], particles['Rotation'], camera_intrinsicsK)
-    # # particles_per_event['v'], particles_per_event['u'] = zip(*particles_per_event.apply(
-    # #     lambda row: angles2map(row['theta'], row['phi']), axis=1))
-    # particles_per_event = particles_per_event2map(events.loc[0], particles, camera_intrinsicsK)
-    # # print(particles_per_event)
-    updated_particles = motion_update(particles)
-    # print(updated_particles)
-
-    test_distributions_rotmat(updated_particles['Rotation'])
-    test_distributions_rotmat(updated_particles['Rotation'])
-    plt.figure(1)
-    plt.scatter(particles_per_event['theta'], particles_per_event['phi'])
-    plt.show()
-    plt.figure(2)
-    plt.scatter(particles_per_event['u'], particles_per_event['v'])
-    plt.show()
-'''
