@@ -30,7 +30,13 @@ intensity_map = np.load('../output/intensity_map.npy')
 # Constants
 num_particles = 50
 num_events_batch = 300
+sigma_init1=0.1
+sigma_init2=0.1
+sigma_init3=0.1
 total_nr_events_considered = 350000
+
+
+
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
@@ -90,7 +96,6 @@ def load_events(filename, head=None, return_number=False):
         else:
             return events.head(head)
 
-
 def event_and_particles_to_angles(event, particles, calibration):
     """
     For a given event, generates dataframe
@@ -144,20 +149,18 @@ def event_and_oneparticle_to_angles(event, particle, calibration):
 
     return theta, phi
 
-
 def angles2map(theta, phi, height=1024, width=2048):
     """
     Converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
     to integer map points (pixel coordinates)
-    Todo: Check v
     :param theta:
     :param phi:
     :param height: height of image in pixels
     :param width: width of image in pixels
     :return: tuple with integer map points (pixel coordinates)
     """
-    # v = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))+height
-    v = np.floor((np.pi / 2 - phi) / np.pi * height) # jb's version
+    v = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))+height
+    # v = np.floor((np.pi / 2 - phi) / np.pi * height) # jb's version
     u = np.floor((theta + np.pi)/(2*np.pi)*width)
     return v, u
 
@@ -242,18 +245,24 @@ def generate_random_rotmat(unit=False, seed=None):
 
     return M
 
-def init_particles(N, unit=False, seed=None):
+def init_particles(N, init_rotmat, sigma1, sigma2, sigma3, seed=None):
     '''
-    in: # particles num_particles
+    in: N = # particles num_particles
+        init_rotmat:  Rotation Matrix of initial pose
     out: data frame with Index, Rotation matrix and weight
     '''
-
-    # p0 = np.eye(3)      #initial rotation matrix of particles
     df = pd.DataFrame(columns=['Rotation', 'Weight', 'theta', 'phi', 'v', 'u', 'pol', 'r_w1', 'r_w2', 'r_w3', 'z'])
     df['Rotation'] = df['Rotation'].astype(object)
     w0 = 1/N
+    G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
+    G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
+    G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+
     for i in range(N):
-        df.at[i, ['Rotation']] = [generate_random_rotmat(unit=unit, seed=seed)]
+        n1 = np.random.uniform(-sigma1, sigma1)
+        n2 = np.random.uniform(-sigma2, sigma2)
+        n3 = np.random.uniform(-sigma3, sigma3)
+        df.at[i,['Rotation']] = [ np.dot(init_rotmat , sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))) ]
         df.at[i, ['Weight']] = float(w0)
     return df
 
@@ -284,7 +293,7 @@ def motion_update(particles, tau, seed=None):
     # TODO: update sigma and tau!!
     sigma1 = 2.3e-8
     sigma2 = 5.0e-6
-    sigma3 = 7e-5*1000000
+    sigma3 = 7.0e-5
     # p_u=[]
     # for i in range(len(particles)):
         # n1 = np.random.normal(0.0, sigma1**2 * tau)
@@ -478,8 +487,7 @@ def mean_of_resampled_particles(particles):
 
     return mean
 
-
-def visualize_particles(rotation_matrices, mean_value=None):
+def visualize_particles(rotation_matrices, mean_value = None):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
 
@@ -500,8 +508,8 @@ def visualize_particles(rotation_matrices, mean_value=None):
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
     ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
-    if mean_value:
-        mean_vec = np.dot(mean, vec)
+    if mean_value is not None:
+        mean_vec = np.dot(mean_value, vec)
         ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
 
     plt.show()
@@ -548,10 +556,15 @@ def rotmat2quaternion(rotmat):
     return qx, qy, qz, qw
 
 def write_quaternions2file(allrotations):
-    allrotations['Rotation'].apply(lambda x: rotmat2quaternion(x))
+    quaternions = pd.DataFrame(columns = ['t','qx','qy','qz','qw'])
+    quaternion = allrotations['Rotation'].apply(lambda x: rotmat2quaternion(x))
 
-    allrotations.to_csv(r'quaternions.txt', header=None, index=None, sep=' ', mode='a')
-
+    quaternions['t'] = allrotations['t']
+    quaternions['qx'] = quaternion.str.get(0)
+    quaternions['qy'] = quaternion.str.get(1)
+    quaternions['qz'] = quaternion.str.get(2)
+    quaternions['qw'] = quaternion.str.get(3)
+    quaternions.to_csv(r'quaternions.txt', index=None, header=None, sep=' ', mode='a')
 
 def run():
     # num_particles = 20
@@ -566,7 +579,9 @@ def run():
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
-    particles = init_particles(num_particles, seed=randomseed)
+
+    particles = init_particles(num_particles, np.eye(3), sigma_init1 , sigma_init2, sigma_init3,  seed=None)
+
     sensortensor = initialize_sensortensor(128, 128)
     # print(particles)
 
@@ -600,8 +615,7 @@ def run():
 
         new_rotation = mean_of_resampled_particles(particles)
 
-        # visualize_particles(particles['Rotation'], new_rotation)
-
+        visualize_particles(particles['Rotation'],  mean_value=new_rotation)
 
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
@@ -615,7 +629,7 @@ def run():
     print(batch_nr)
     print(event_nr)
     visualize_particles(mean_of_rotations['Rotation'], mean_value = None)
-    #write_quaternions2file(all_rotations)
+    write_quaternions2file(all_rotations)
 
     print("Time passed: {} sec".format(round(time.time() - starttime)))
     print("Done")
