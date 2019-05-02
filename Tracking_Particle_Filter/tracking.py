@@ -32,12 +32,12 @@ filename_poses = os.path.join(data_dir, 'poses.txt')
 
 
 # Constants
-num_particles = 50
+num_particles = 100
 num_events_batch = 300
-sigma_init1=0.1
-sigma_init2=0.1
-sigma_init3=0.1
-total_nr_events_considered = 350000
+sigma_init1=0.05
+sigma_init2=0.05
+sigma_init3=0.05
+total_nr_events_considered = 30001
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
@@ -266,7 +266,7 @@ def init_particles(N, init_rotmat, sigma1, sigma2, sigma3, seed=None):
         n1 = np.random.uniform(-sigma1, sigma1)
         n2 = np.random.uniform(-sigma2, sigma2)
         n3 = np.random.uniform(-sigma3, sigma3)
-        df.at[i,['Rotation']] = [ np.dot(init_rotmat , sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))) ]
+        df.at[i,['Rotation']] = [ np.dot( init_rotmat , sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))) ]
         df.at[i, ['Weight']] = float(w0)
     return df
 
@@ -295,9 +295,9 @@ def motion_update(particles, tau, seed=None):
     G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
     G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
     # TODO: update sigma and tau!!
-    sigma1 = 2.3e-8
-    sigma2 = 5.0e-6
-    sigma3 = 7.0e-5
+    sigma1 = 2.3e-4
+    sigma2 = 5.0e-3
+    sigma3 = 7.0e-2
     # p_u=[]
     # for i in range(len(particles)):
         # n1 = np.random.normal(0.0, sigma1**2 * tau)
@@ -309,7 +309,7 @@ def motion_update(particles, tau, seed=None):
                                     + np.dot(np.random.normal(0.0, sigma3**2 * tau), G2)
                                     + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
 
-    print(updated_particles['Rotation'])
+    #print(updated_particles['Rotation'])
 
     return updated_particles
 
@@ -554,9 +554,9 @@ def rotmat2quaternion(rotmat):
     :return: quaternion in form: (qx,qy,qz,qw)
     '''
     qw=np.sqrt( 1+rotmat[0][0]+rotmat[1][1]+rotmat[2][2])/2
-    qx = (rotmat[2][1]-rotmat[1][2]/(4*qw))
-    qy = (rotmat[0][2]-rotmat[2][0]/(4*qw))
-    qz = (rotmat[1][0]-rotmat[0][1]/(4*qw))
+    qx = (rotmat[2][1]-rotmat[1][2])/(4*qw)
+    qy = (rotmat[0][2]-rotmat[2][0])/(4*qw)
+    qz = (rotmat[1][0]-rotmat[0][1])/(4*qw)
     return qx, qy, qz, qw
 
 def write_quaternions2file(allrotations):
@@ -584,7 +584,7 @@ def run():
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
 
-    particles = init_particles(num_particles, np.eye(3), sigma_init1 , sigma_init2, sigma_init3,  seed=None)
+    particles = init_particles(num_particles, first_matrix, sigma_init1 , sigma_init2, sigma_init3,  seed=None)
 
     sensortensor = initialize_sensortensor(128, 128)
     # print(particles)
@@ -619,11 +619,11 @@ def run():
 
         new_rotation = mean_of_resampled_particles(particles)
 
-        visualize_particles(particles['Rotation'],  mean_value=new_rotation)
+        # visualize_particles(particles['Rotation'],  mean_value=new_rotation)
 
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
-        # print("time: ", t_batch, "Rotations: ", rotmat2quaternion(new_rotation))
+        print("time: ", t_batch, "Rotations: ", rotmat2quaternion(new_rotation))
 
         particles = motion_update(particles, tau=dt_batch, seed=None)
 

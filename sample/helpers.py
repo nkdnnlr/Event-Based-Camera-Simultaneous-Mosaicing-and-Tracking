@@ -28,7 +28,7 @@ if __name__ == '__main__':
     data_dir = '../data/synth1'
     filename_poses = os.path.join(data_dir, 'poses.txt')
     first_matrix = get_first_matrix(filename_poses)
-    # print(first_matrix)
+
 
 
     #Test: TODO: Good opportunity to practice testing with a testing module. Should be unit matrix (or close to it)
