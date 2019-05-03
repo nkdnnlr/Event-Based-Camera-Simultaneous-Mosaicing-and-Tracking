@@ -443,8 +443,6 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
 
-    # visualize_particles(particles['Rotation'],mean=mean)
-
 
     '''
     random_x = np.random.randn(400)
@@ -477,15 +475,20 @@ def visualize_particles(rotation_matrices, mean_value = None):
     rotY = vecM.str.get(1)
     rotZ = vecM.str.get(2)
 
-
-    ax = plt.axes(projection='3d')
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
     ax.set_xlim3d(-1, 1)
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
-    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
+    p = ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)))
     if mean_value is not None:
         mean_vec = np.dot(mean_value, vec)
-        ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+        q = ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+    cbar = fig.colorbar(p, ax=ax)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    cbar.set_label("Nr. of pose")
 
     plt.show()
 
