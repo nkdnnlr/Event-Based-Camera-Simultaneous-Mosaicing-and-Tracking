@@ -23,6 +23,23 @@ def get_first_matrix(filename_poses):
          poses.loc[0, 'qy'], poses.loc[0, 'qz']))
     return first_matrix
 
+def load_poses(filename_poses, includes_translations=False):
+    """
+    gets first matrix from poses file
+    :param filename_poses: filename of poses
+    :return:
+    """
+
+    if includes_translations:
+        poses = pd.read_csv(filename_poses, delimiter=' ', header=None, names=['sec', 'nsec', 'x', 'y', 'z', 'qx', 'qy', 'qz', 'qw'])
+        poses['t'] = poses['sec'] + 1e-9 * (poses['nsec'])  # time_ctrl in MATLAB
+    else:
+        poses = pd.read_csv(filename_poses, delimiter=' ', header=None, names=['t', 'qx', 'qy', 'qz', 'qw'])
+
+    poses = poses[['t', 'qw', 'qx', 'qy', 'qz']]
+    num_poses = poses.size
+
+    return poses
 
 def load_events(filename, head=None, return_number=False):
     """

@@ -91,6 +91,7 @@ def q2R(q):
     :param q: [qw, qx, qy, qz] * [1 i j k]
     :return: R
     """
+
     R = np.zeros((3, 3))
     R[0, 0] = 1. - 2. * (q[2]**2. + q[3]**2.)
     R[0, 1] = 2. * (q[1] * q[2] - q[3] * q[0])
@@ -130,6 +131,27 @@ def q2R_dict(df):
         rotmats[df.loc[idx, 't']] = q2R((df.loc[idx, 'qw'], df.loc[idx, 'qx'],
                                           df.loc[idx, 'qy'], df.loc[idx, 'qz']))
     return rotmats
+
+def q2R_df(df):
+    """
+    Transforms quaternions vector q to rotation matrix R
+    :param df:
+    :return:
+    """
+    # df['rotmats_ctrl'] = np.zeros((3,3))
+    rotmats =pd.DataFrame(columns = ['t','Rotation'])
+    rotmats2 = pd.DataFrame(columns=['t'])
+    # rotmats['t'] = df['t']
+    counter  = 0
+    # rotmats['t'] = df['t']
+    for idx, row in df.copy().iterrows():
+
+        rotmats.loc[idx, 'Rotation'] = (q2R([row['qw'], row['qx'],
+                                          row['qy'], row['qz']]))
+
+    rotmats['t'] = df['t']
+    return rotmats
+    # print(rotmats2.head(), rotmats2.count())
 
 
 def rotation_interpolation(t, rotmats_dict, t_query):
