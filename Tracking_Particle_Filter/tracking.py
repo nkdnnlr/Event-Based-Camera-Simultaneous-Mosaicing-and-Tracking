@@ -2,6 +2,7 @@ import time
 import sys
 import math
 
+import os
 import numpy as np
 import pandas as pd
 import scipy.linalg as sp
@@ -18,23 +19,26 @@ import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 # import matplotlib.animation as animation
+import sample.helpers as helpers
 
 
 from numpy import outer
 import math
 
-event_file = '../data/synth1/events.txt'
+data_dir = '../data/synth1'
 intensity_map = np.load('../output/intensity_map.npy')
+event_file = os.path.join(data_dir, 'events.txt')
+filename_poses = os.path.join(data_dir, 'poses.txt')
 
 
 # Constants
-num_particles = 50
+num_particles = 100
 num_events_batch = 300
-sigma_init1=0.1
-sigma_init2=0.1
-sigma_init3=0.1
-total_nr_events_considered = 1600
-
+sigma_init1=0.05
+sigma_init2=0.05
+sigma_init3=0.05
+total_nr_events_considered = 1200001
+first_matrix = helpers.get_first_matrix(filename_poses)
 
 
 # tau=7000
@@ -63,38 +67,6 @@ def camera_intrinsics():
     K = np.array([[91.4014729896821, 0.0, 64.0], [0.0, 91.4014729896821, 64.0], [0, 0, 1]]) #as per guillermo's suggestion
 
     return K
-
-def load_events(filename, head=None, return_number=False):
-    """
-    Loads events in file specified by filename (txt file)
-    :param filename:
-    :return: events
-    """
-    print("Loading Events")
-    # Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
-    events = pd.read_csv(filename, delimiter=' ', header=head, names=['sec', 'nsec', 'x', 'y', 'pol'])
-    # print("Head: \n", events.head(10))
-    num_events = events.size
-    print("Number of events in file: ", num_events)
-
-    # Remove time of offset
-    first_event_sec = events.loc[0, 'sec']
-    first_event_nsec = events.loc[0, 'nsec']
-    events['t'] = events['sec'] - first_event_sec + 1e-9 * (events['nsec'] - first_event_nsec)
-    events = events[['t', 'x', 'y', 'pol']]
-    # print("Head: \n", events.head(10))
-    # print("Tail: \n", events.tail(10))
-    # print(events['0])
-    if return_number:
-        if head is None:
-            return events, num_events
-        else:
-            return events.head(head), len(events.head(head))
-    else:
-        if head is None:
-            return events
-        else:
-            return events.head(head)
 
 def event_and_particles_to_angles(event, particles, calibration):
     """
@@ -262,7 +234,7 @@ def init_particles(N, init_rotmat, sigma1, sigma2, sigma3, seed=None):
         n1 = np.random.uniform(-sigma1, sigma1)
         n2 = np.random.uniform(-sigma2, sigma2)
         n3 = np.random.uniform(-sigma3, sigma3)
-        df.at[i,['Rotation']] = [ np.dot(init_rotmat , sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))) ]
+        df.at[i,['Rotation']] = [ np.dot( init_rotmat , sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))) ]
         df.at[i, ['Weight']] = float(w0)
     return df
 
@@ -291,9 +263,9 @@ def motion_update(particles, tau, seed=None):
     G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
     G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
     # TODO: update sigma and tau!!
-    sigma1 = 2.3e-8
-    sigma2 = 5.0e-6
-    sigma3 = 7.0e-5
+    sigma1 = 2.3e-4
+    sigma2 = 5.0e-3
+    sigma3 = 1.0e-4
     # p_u=[]
     # for i in range(len(particles)):
         # n1 = np.random.normal(0.0, sigma1**2 * tau)
@@ -305,7 +277,7 @@ def motion_update(particles, tau, seed=None):
                                     + np.dot(np.random.normal(0.0, sigma3**2 * tau), G2)
                                     + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
 
-    print(updated_particles['Rotation'])
+    #print(updated_particles['Rotation'])
 
     return updated_particles
 
@@ -365,21 +337,23 @@ def get_intensity_from_gradientmap(gradientmap, u, v):
     """
     return gradientmap[v, u]
 
-def event_likelihood(z, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
+def event_likelihood(z, event, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     """
     For a given absolute log intensity difference z,
     returns the likelihood of an event.
     likelihood = gaussian distribution + noise
-    TODO: What about negative values?
-    TODO: If z negative but event positive, cancel!
+    TODO: What about negative values? -> Done. test!!
+    TODO: If z negative but event positive, cancel! -> Done, test!!
     :param z: log intensity difference
     :param mu: mean
     :param sigma: standard deviation
     :param k_e: minimum constant / noise
     :return: event-likelihood (scalar)
     """
-    y = k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(z - mu) ** 2 / (2 * sigma) ** 2)
-    return y
+    if np.sign(z) == np.sign(event['pol']):
+        return k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(np.abs(z) - mu) ** 2 / (2 * sigma) ** 2)
+    else:
+        return k_e
 
 def measurement_update(events_batch,
                        particles,
@@ -405,10 +379,10 @@ def measurement_update(events_batch,
         particle_ttc = oneparticle_per_event2map(event, particle_ttc, calibration)
         u_ttc = particle_ttc['u']
         v_ttc = particle_ttc['v']
-        particles['logintensity_ttc'] = intensity_map[int(v_ttc), int(u_ttc)]
+        particles['logintensity_ttc'] = intensity_map[int(v_ttc-1), int(u_ttc-1)]
         particles['logintensity_t'] = particles.apply(lambda row: intensity_map[int(row.v-1), int(row.u-1)], axis=1)
-        particles['z'] = abs(particles['logintensity_t'] - particles['logintensity_ttc'])
-        particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z)], axis=1)
+        particles['z'] = particles['logintensity_t'] - particles['logintensity_ttc']
+        particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z, event)], axis=1)
     particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x)) #Tested
     return particles
 
@@ -553,9 +527,9 @@ def rotmat2quaternion(rotmat):
     :return: quaternion in form: (qx,qy,qz,qw)
     '''
     qw=np.sqrt( 1+rotmat[0][0]+rotmat[1][1]+rotmat[2][2])/2
-    qx = (rotmat[2][1]-rotmat[1][2]/(4*qw))
-    qy = (rotmat[0][2]-rotmat[2][0]/(4*qw))
-    qz = (rotmat[1][0]-rotmat[0][1]/(4*qw))
+    qx = (rotmat[2][1]-rotmat[1][2])/(4*qw)
+    qy = (rotmat[0][2]-rotmat[2][0])/(4*qw)
+    qz = (rotmat[1][0]-rotmat[0][1])/(4*qw)
     return qx, qy, qz, qw
 
 def write_quaternions2file(allrotations):
@@ -576,14 +550,14 @@ def run():
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
-    events, num_events = load_events(event_file, head=total_nr_events_considered, return_number=True)
+    events, num_events = helpers.load_events(event_file, head=total_nr_events_considered, return_number=True)
     events = events.astype({'x': int, 'y': int})
     print(events.head()['x'])
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
 
-    particles = init_particles(num_particles, np.eye(3), sigma_init1 , sigma_init2, sigma_init3,  seed=None)
+    particles = init_particles(num_particles, first_matrix, sigma_init1 , sigma_init2, sigma_init3,  seed=None)
 
     sensortensor = initialize_sensortensor(128, 128)
     # print(particles)
@@ -622,7 +596,7 @@ def run():
 
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
-        # print("time: ", t_batch, "Rotations: ", rotmat2quaternion(new_rotation))
+        print("time: ", t_batch, "Rotations: ", rotmat2quaternion(new_rotation))
 
         particles = motion_update(particles, tau=dt_batch, seed=None)
 
@@ -648,7 +622,7 @@ if __name__ == '__main__':
     # print("Events per batch: ", num_events_batch)
     # print("Initialized particles: ", num_particles)
     # calibration = camera_intrinsics()
-    # events, num_events = load_events(event_file, head=1, return_number=True)
+    # events, num_events = helpers.load_events(event_file, head=1, return_number=True)
     # events = events.astype({'x': int, 'y': int})
     # print(events.head()['x'])
     # print("Events total: ", num_events)
