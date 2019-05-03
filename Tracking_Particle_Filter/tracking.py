@@ -37,7 +37,7 @@ num_events_batch = 300
 sigma_init1=0.05
 sigma_init2=0.05
 sigma_init3=0.05
-total_nr_events_considered = 30001
+total_nr_events_considered = 1200001
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
@@ -297,7 +297,7 @@ def motion_update(particles, tau, seed=None):
     # TODO: update sigma and tau!!
     sigma1 = 2.3e-4
     sigma2 = 5.0e-3
-    sigma3 = 7.0e-2
+    sigma3 = 1.0e-4
     # p_u=[]
     # for i in range(len(particles)):
         # n1 = np.random.normal(0.0, sigma1**2 * tau)
@@ -411,7 +411,7 @@ def measurement_update(events_batch,
         particle_ttc = oneparticle_per_event2map(event, particle_ttc, calibration)
         u_ttc = particle_ttc['u']
         v_ttc = particle_ttc['v']
-        particles['logintensity_ttc'] = intensity_map[int(v_ttc), int(u_ttc)]
+        particles['logintensity_ttc'] = intensity_map[int(v_ttc-1), int(u_ttc-1)]
         particles['logintensity_t'] = particles.apply(lambda row: intensity_map[int(row.v-1), int(row.u-1)], axis=1)
         particles['z'] = particles['logintensity_t'] - particles['logintensity_ttc']
         particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z, event)], axis=1)
