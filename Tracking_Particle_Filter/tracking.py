@@ -38,15 +38,17 @@ num_events_batch = 300
 sigma_init1=0.05
 sigma_init2=0.05
 sigma_init3=0.05
-sigma = 1.0e-4 # for motion update
-total_nr_events_considered = 1200001
+sigma_1 = 1.0e-5 # sigma3 for motion update
+sigma_2 = 1.0e-5 # sigma3 for motion update
+sigma_3 = 1.0e-1 # sigma3 for motion update
+total_nr_events_considered = 60001  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
-# sigma = 8.0*10**(-2)
+# sigma_3 = 8.0*10**(-2)
 minimum_constant = 1e-3
 sensor_height = 128
 sensor_width = 128
@@ -261,13 +263,13 @@ def motion_update(particles, tau, seed=None):
         np.random.seed(seed)
 
     updated_particles = particles.copy()  # type: object
-    G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
-    G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
-    G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
-    # TODO: update sigma and tau!!
-    sigma1 = 2.3e-4
-    sigma2 = 5.0e-3
-    sigma3 = sigma
+    G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])  # rotation around x
+    G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])  # rotation around y
+    G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])  # rotation around z
+    # TODO: update sigma_3 and tau!!
+    sigma1 = sigma_1
+    sigma2 = sigma_2
+    sigma3 = sigma_3
     # p_u=[]
     # for i in range(len(particles)):
         # n1 = np.random.normal(0.0, sigma1**2 * tau)
@@ -275,9 +277,9 @@ def motion_update(particles, tau, seed=None):
         # n3 = np.random.normal(0.0, sigma3**2 * tau)
         # p_u.append(np.dot(particle[i], sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))))
     updated_particles['Rotation'] = updated_particles['Rotation'].apply(
-        lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma3**2 * tau), G1)
-                                    + np.dot(np.random.normal(0.0, sigma3**2 * tau), G2)
-                                    + np.dot(np.random.normal(0.0,sigma3**2 * tau), G3))))
+        lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma3**2 * tau), G1) +
+                                    np.dot(np.random.normal(0.0, sigma3**2 * tau), G2) +
+                                    np.dot(np.random.normal(0.0, sigma3**2 * tau), G3))))
 
     #print(updated_particles['Rotation'])
 
@@ -533,7 +535,9 @@ def run():
                           num_particles=num_particles,
                           num_events=total_nr_events_considered,
                           num_events_per_batch=num_events_batch,
-                          sigma3=sigma,
+                          sigma1=sigma_1,
+                          sigma2=sigma_2,
+                          sigma3=sigma_3,
                           time_passed=time_passed)
 
 

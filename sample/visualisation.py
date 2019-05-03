@@ -22,15 +22,15 @@ def load_file(filename, names = None):
 
     return dataframe
 
-
-# poses_theirs = pd.read_csv('poses.txt', names = ['t', 'x','y','z','qx','qy','qz','qw'], delimiter = ' ')
-# poses_ours = pd.read_csv('quaternions.txt', names = ['t','qx','qy','qz','qw'], delimiter = ' ')
-poses_theirs = helpers.load_poses('poses.txt', includes_translations=True)
-poses_ours = helpers.load_poses('quaternions.txt')
-
-rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
-# rotations_ours = coordinate_transforms.q2R_df(poses_ours)
-print(rotations_theirs.head())
+#
+# # poses_theirs = pd.read_csv('poses.txt', names = ['t', 'x','y','z','qx','qy','qz','qw'], delimiter = ' ')
+# # poses_ours = pd.read_csv('quaternions.txt', names = ['t','qx','qy','qz','qw'], delimiter = ' ')
+# poses_theirs = helpers.load_poses('poses.txt', includes_translations=True)
+# poses_ours = helpers.load_poses('quaternions.txt')
+#
+# rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
+# # rotations_ours = coordinate_transforms.q2R_df(poses_ours)
+# print(rotations_theirs.head())
 
 
 def compare_trajectories(df_ours, df_theirs):
