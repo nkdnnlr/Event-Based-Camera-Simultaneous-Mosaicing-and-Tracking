@@ -38,6 +38,7 @@ num_events_batch = 300
 sigma_init1=0.05
 sigma_init2=0.05
 sigma_init3=0.05
+sigma = 1.0e-4 # for motion update
 total_nr_events_considered = 1200001
 first_matrix = helpers.get_first_matrix(filename_poses)
 
@@ -45,7 +46,7 @@ first_matrix = helpers.get_first_matrix(filename_poses)
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 mu = 0.22
-sigma = 8.0*10**(-2)
+# sigma = 8.0*10**(-2)
 minimum_constant = 1e-3
 sensor_height = 128
 sensor_width = 128
@@ -266,7 +267,7 @@ def motion_update(particles, tau, seed=None):
     # TODO: update sigma and tau!!
     sigma1 = 2.3e-4
     sigma2 = 5.0e-3
-    sigma3 = 1.0e-4
+    sigma3 = sigma
     # p_u=[]
     # for i in range(len(particles)):
         # n1 = np.random.normal(0.0, sigma1**2 * tau)
@@ -461,27 +462,6 @@ def mean_of_resampled_particles(particles):
     return mean
 
 
-def rotmat2quaternion(rotmat):
-    '''
-    :param rotmat: 3x3 Rotation matrix
-    :return: quaternion in form: (qx,qy,qz,qw)
-    '''
-    qw=np.sqrt( 1+rotmat[0][0]+rotmat[1][1]+rotmat[2][2])/2
-    qx = (rotmat[2][1]-rotmat[1][2])/(4*qw)
-    qy = (rotmat[0][2]-rotmat[2][0])/(4*qw)
-    qz = (rotmat[1][0]-rotmat[0][1])/(4*qw)
-    return qx, qy, qz, qw
-
-def write_quaternions2file(allrotations):
-    quaternions = pd.DataFrame(columns = ['t','qx','qy','qz','qw'])
-    quaternion = allrotations['Rotation'].apply(lambda x: rotmat2quaternion(x))
-
-    quaternions['t'] = allrotations['t']
-    quaternions['qx'] = quaternion.str.get(0)
-    quaternions['qy'] = quaternion.str.get(1)
-    quaternions['qz'] = quaternion.str.get(2)
-    quaternions['qw'] = quaternion.str.get(3)
-    quaternions.to_csv(r'quaternions.txt', index=None, sep=' ', mode='a')
 
 def run():
     # num_particles = 20
@@ -509,7 +489,6 @@ def run():
     unit_matrix = np.array([[1,0,0], [0,1,0], [0,0,1]])
     all_rotations.loc[batch_nr] = {'t': t_batch,
                                    'Rotation': unit_matrix}
-
     # print(all_rotations)
     # exit()
     print("Start tracker!")
@@ -536,7 +515,7 @@ def run():
 
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
-        print("time: ", t_batch, "Rotations: ", rotmat2quaternion(new_rotation))
+        print("time: ", t_batch, "Rotations: ", helpers.rotmat2quaternion(new_rotation))
 
         particles = motion_update(particles, tau=dt_batch, seed=None)
 
@@ -546,9 +525,19 @@ def run():
     print(batch_nr)
     print(event_nr)
     visualisation.visualize_particles(mean_of_rotations['Rotation'], mean_value = None)
-    write_quaternions2file(all_rotations)
+    datestring = helpers.write_quaternions2file(all_rotations)
+    #Include all wished
+    time_passed = round(time.time() - starttime)
+    helpers.write_logfile(datestring,
+                          experiment='find_optimal_parameters',
+                          num_particles=num_particles,
+                          num_events=total_nr_events_considered,
+                          num_events_per_batch=num_events_batch,
+                          sigma3=sigma,
+                          time_passed=time_passed)
 
-    print("Time passed: {} sec".format(round(time.time() - starttime)))
+
+    print("Time passed: {} sec".format(time_passed))
     print("Done")
 
 if __name__ == '__main__':

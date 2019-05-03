@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import sample.coordinate_transforms as coordinate_transforms
+import datetime
 
 
 def get_first_matrix(filename_poses):
@@ -74,6 +75,60 @@ def load_events(filename, head=None, return_number=False):
             return events.head(head)
 
 
+def rotmat2quaternion(rotmat):
+    """
+    Converts rotation matrix to quaternions in form (qx,qy,qz,qw)
+    :param rotmat: 3x3 Rotation matrix
+    :return: quaternion in form: (qx,qy,qz,qw)
+    """
+    qw = np.sqrt(1 + rotmat[0][0] + rotmat[1][1] + rotmat[2][2]) / 2
+    qx = (rotmat[2][1] - rotmat[1][2]) / (4 * qw)
+    qy = (rotmat[0][2] - rotmat[2][0]) / (4 * qw)
+    qz = (rotmat[1][0] - rotmat[0][1]) / (4 * qw)
+    return qx, qy, qz, qw
+
+
+def write_quaternions2file(allrotations):
+    """
+    Converts rotations to quaternions and saves in quaternions_[datestring].csv
+    :param allrotations: all rotations
+    :return: datestring
+    """
+    # Gets datestring
+    now = datetime.datetime.now()
+    datestring = now.strftime("%d%m%YT%H%M%S")
+    filename = 'quaternions_' + datestring + '.txt'
+
+    # Makes DataFrame with quaternions
+    quaternions = pd.DataFrame(columns = ['t','qx','qy','qz','qw'])
+    quaternion = allrotations['Rotation'].apply(lambda x: rotmat2quaternion(x))
+    quaternions['t'] = allrotations['t']
+    quaternions['qx'] = quaternion.str.get(0)
+    quaternions['qy'] = quaternion.str.get(1)
+    quaternions['qz'] = quaternion.str.get(2)
+    quaternions['qw'] = quaternion.str.get(3)
+
+    # Saves quaternions as csv
+    quaternions.to_csv(filename, index=None, header=None, sep=' ', mode='a')
+    return datestring
+
+def write_logfile(datestring, **kwargs):
+    """
+    Writes logfile from metadata
+    :param datestring:
+    :param kwargs: dictionary with metadata, such as num_events, num_batches, etc.
+    :return:
+    """
+    filename = 'quaternions_' + datestring + '.log'
+
+    with open(filename, 'a') as the_file:
+        the_file.write("{0}: {1}\n".format('Datestring', datestring))
+        for key, value in kwargs.items():
+            print(key, ":", value)
+            the_file.write("{0}: {1}\n".format(key, value))
+
+
+
 if __name__ == '__main__':
     data_dir = '../data/synth1'
     filename_poses = os.path.join(data_dir, 'poses.txt')
@@ -82,6 +137,8 @@ if __name__ == '__main__':
     # first_matrix = get_first_matrix(filename_poses)
     # all_events = load_events(filename_events, head=None, return_number=True)
     # print(all_events)
+
+    write_logfile('abcdefg',  a=23, b='hello', aa='oops')
 
 
 
