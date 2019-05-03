@@ -22,16 +22,6 @@ def load_file(filename, names = None):
 
     return dataframe
 
-#
-# # poses_theirs = pd.read_csv('poses.txt', names = ['t', 'x','y','z','qx','qy','qz','qw'], delimiter = ' ')
-# # poses_ours = pd.read_csv('quaternions.txt', names = ['t','qx','qy','qz','qw'], delimiter = ' ')
-# poses_theirs = helpers.load_poses('poses.txt', includes_translations=True)
-# poses_ours = helpers.load_poses('quaternions.txt')
-#
-# rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
-# # rotations_ours = coordinate_transforms.q2R_df(poses_ours)
-# print(rotations_theirs.head())
-
 
 def compare_trajectories(df_ours, df_theirs):
     """
@@ -41,7 +31,6 @@ def compare_trajectories(df_ours, df_theirs):
     multiplies rot matrix with Z-unit-vector.
     :return: plotly and matplotlib plot which shows the distribution
     """
-
 
 
     vec = np.array([1,0,0]).T
@@ -71,7 +60,6 @@ def compare_trajectories(df_ours, df_theirs):
 
     plt.show()
 
-compare_trajectories(rotations_ours,rotations_theirs)
 
 def visualize_particles(rotation_matrices, mean_value = None):
     """
@@ -123,3 +111,16 @@ def plot_unitsphere_matplot():
         x, y, z, rstride=1, cstride=1, color='c', alpha=0.6, linewidth=0)
     plt.show()
 
+
+if __name__ == '__main__':
+    #
+    # # poses_theirs = pd.read_csv('poses.txt', names = ['t', 'x','y','z','qx','qy','qz','qw'], delimiter = ' ')
+    # # poses_ours = pd.read_csv('quaternions.txt', names = ['t','qx','qy','qz','qw'], delimiter = ' ')
+    # poses_theirs = helpers.load_poses('poses.txt', includes_translations=True)
+    # poses_ours = helpers.load_poses('quaternions.txt')
+    #
+    # rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
+    # # rotations_ours = coordinate_transforms.q2R_df(poses_ours)
+    # print(rotations_theirs.head())
+
+    compare_trajectories(rotations_ours,rotations_theirs)
