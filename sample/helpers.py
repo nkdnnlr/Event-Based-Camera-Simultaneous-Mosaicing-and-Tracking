@@ -23,7 +23,6 @@ def get_first_matrix(filename_poses):
          poses.loc[0, 'qy'], poses.loc[0, 'qz']))
     return first_matrix
 
-
 if __name__ == '__main__':
     data_dir = '../data/synth1'
     filename_poses = os.path.join(data_dir, 'poses.txt')

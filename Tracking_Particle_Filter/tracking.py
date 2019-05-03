@@ -33,7 +33,7 @@ num_events_batch = 300
 sigma_init1=0.1
 sigma_init2=0.1
 sigma_init3=0.1
-total_nr_events_considered = 350000
+total_nr_events_considered = 1600
 
 
 
@@ -468,8 +468,6 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
 
-    # visualize_particles(particles['Rotation'],mean=mean)
-
 
     '''
     random_x = np.random.randn(400)
@@ -502,15 +500,20 @@ def visualize_particles(rotation_matrices, mean_value = None):
     rotY = vecM.str.get(1)
     rotZ = vecM.str.get(2)
 
-
-    ax = plt.axes(projection='3d')
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
     ax.set_xlim3d(-1, 1)
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
-    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
+    p = ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)))
     if mean_value is not None:
         mean_vec = np.dot(mean_value, vec)
-        ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+        q = ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+    cbar = fig.colorbar(p, ax=ax)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    cbar.set_label("Nr. of pose")
 
     plt.show()
 
@@ -564,7 +567,7 @@ def write_quaternions2file(allrotations):
     quaternions['qy'] = quaternion.str.get(1)
     quaternions['qz'] = quaternion.str.get(2)
     quaternions['qw'] = quaternion.str.get(3)
-    quaternions.to_csv(r'quaternions.txt', index=None, header=None, sep=' ', mode='a')
+    quaternions.to_csv(r'quaternions.txt', index=None, sep=' ', mode='a')
 
 def run():
     # num_particles = 20
@@ -615,7 +618,7 @@ def run():
 
         new_rotation = mean_of_resampled_particles(particles)
 
-        visualize_particles(particles['Rotation'],  mean_value=new_rotation)
+        # visualize_particles(particles['Rotation'],  mean_value=new_rotation)
 
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
