@@ -114,6 +114,22 @@ def rotmat2eulerangles_df(df):
     eulerangles = eulerangles.drop(columns=['all'])
     return eulerangles
 
+def get_sigmas(eulerangles, all_events=3564657, batch_size=300, factor=1):
+    """
+
+    :param eulerangles:
+    :return:
+    """
+    dx = eulerangles['th_x'].max() - eulerangles['th_x'].min()
+    dy = eulerangles['th_y'].max() - eulerangles['th_y'].min()
+    dz = eulerangles['th_z'].max() - eulerangles['th_z'].min()
+
+    num_batches = all_events/batch_size
+    sigma_1 = factor * dx / num_batches
+    sigma_2 = factor * dy / num_batches
+    sigma_3 = factor * dz / num_batches
+
+    return sigma_1, sigma_2, sigma_3
 
 
 def write_quaternions2file(allrotations):
@@ -176,6 +192,10 @@ if __name__ == '__main__':
     eulerangles = rotmat2eulerangles_df(rotmats)
     # print(eulerangles.head(10))
     print(eulerangles.describe())
+    sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles)
+    print(sigma_1)
+    print(sigma_2)
+    print(sigma_3)
 
 
 
