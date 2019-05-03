@@ -87,6 +87,50 @@ def rotmat2quaternion(rotmat):
     qz = (rotmat[1][0] - rotmat[0][1]) / (4 * qw)
     return qx, qy, qz, qw
 
+def rotmat2eulerangles(R):
+    """
+    Calculates Euler angles from rotation matrix
+    :param rotmat: rotation matrix
+    :return: Euler angles theta_x, theta_y, theta_z
+    """
+    theta_x = np.arctan2(R[2][1], R[2][2])
+    theta_y = np.arctan2(-R[2][0], np.sqrt(R[2][1]**2 + R[2][2]**2))
+    theta_z = np.arctan2(R[1][0], R[0][0])
+
+    return theta_x, theta_y, theta_z
+
+def rotmat2eulerangles_df(df):
+    """
+    TODO: not tested. test! (for example by recreating rotation matrix R)
+    From rotation matrices DataFrame, creates DataFrame with Euler angles theta_x, theta_y, theta_z
+    :param df: DataFrame with rotation matrices
+    :return: DataFrame with Euler angles theta_x, theta_y, theta_z
+    """
+    eulerangles = pd.DataFrame(columns = ['all', 'th_x', 'th_y', 'th_z'])
+    eulerangles['all'] = df['Rotation'].apply(lambda R: rotmat2eulerangles(R))
+    eulerangles['th_x'] = eulerangles['all'].apply(lambda row: row[0])
+    eulerangles['th_y'] = eulerangles['all'].apply(lambda row: row[1])
+    eulerangles['th_z'] = eulerangles['all'].apply(lambda row: row[2])
+    eulerangles = eulerangles.drop(columns=['all'])
+    return eulerangles
+
+def get_sigmas(eulerangles, all_events=3564657, batch_size=300, factor=1):
+    """
+
+    :param eulerangles:
+    :return:
+    """
+    dx = eulerangles['th_x'].max() - eulerangles['th_x'].min()
+    dy = eulerangles['th_y'].max() - eulerangles['th_y'].min()
+    dz = eulerangles['th_z'].max() - eulerangles['th_z'].min()
+
+    num_batches = all_events/batch_size
+    sigma_1 = factor * dx / num_batches
+    sigma_2 = factor * dy / num_batches
+    sigma_3 = factor * dz / num_batches
+
+    return sigma_1, sigma_2, sigma_3
+
 
 def write_quaternions2file(allrotations):
     """
@@ -135,10 +179,25 @@ if __name__ == '__main__':
     filename_events = os.path.join(data_dir, 'events.txt')
 
     # first_matrix = get_first_matrix(filename_poses)
+    # print(first_matrix)
     # all_events = load_events(filename_events, head=None, return_number=True)
     # print(all_events)
 
-    write_logfile('abcdefg',  a=23, b='hello', aa='oops')
+    # write_logfile('abcdefg',  a=23, b='hello', aa='oops')
+    poses = load_poses(filename_poses, includes_translations=True)
+    rotmats = coordinate_transforms.q2R_df(poses)
+    print(rotmats.loc[0]['Rotation'])
+
+
+    eulerangles = rotmat2eulerangles_df(rotmats)
+    # print(eulerangles.head(10))
+    print(eulerangles.describe())
+    sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles)
+    print(sigma_1)
+    print(sigma_2)
+    print(sigma_3)
+
+
 
 
 
