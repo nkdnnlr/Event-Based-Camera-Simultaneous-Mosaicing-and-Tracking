@@ -68,38 +68,6 @@ def camera_intrinsics():
 
     return K
 
-def load_events(filename, head=None, return_number=False):
-    """
-    Loads events in file specified by filename (txt file)
-    :param filename:
-    :return: events
-    """
-    print("Loading Events")
-    # Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
-    events = pd.read_csv(filename, delimiter=' ', header=head, names=['sec', 'nsec', 'x', 'y', 'pol'])
-    # print("Head: \n", events.head(10))
-    num_events = events.size
-    print("Number of events in file: ", num_events)
-
-    # Remove time of offset
-    first_event_sec = events.loc[0, 'sec']
-    first_event_nsec = events.loc[0, 'nsec']
-    events['t'] = events['sec'] - first_event_sec + 1e-9 * (events['nsec'] - first_event_nsec)
-    events = events[['t', 'x', 'y', 'pol']]
-    # print("Head: \n", events.head(10))
-    # print("Tail: \n", events.tail(10))
-    # print(events['0])
-    if return_number:
-        if head is None:
-            return events, num_events
-        else:
-            return events.head(head), len(events.head(head))
-    else:
-        if head is None:
-            return events
-        else:
-            return events.head(head)
-
 def event_and_particles_to_angles(event, particles, calibration):
     """
     For a given event, generates dataframe
@@ -579,7 +547,7 @@ def run():
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
-    events, num_events = load_events(event_file, head=total_nr_events_considered, return_number=True)
+    events, num_events = helpers.load_events(event_file, head=total_nr_events_considered, return_number=True)
     events = events.astype({'x': int, 'y': int})
     print(events.head()['x'])
     print("Events total: ", num_events)
@@ -651,7 +619,7 @@ if __name__ == '__main__':
     # print("Events per batch: ", num_events_batch)
     # print("Initialized particles: ", num_particles)
     # calibration = camera_intrinsics()
-    # events, num_events = load_events(event_file, head=1, return_number=True)
+    # events, num_events = helpers.load_events(event_file, head=1, return_number=True)
     # events = events.astype({'x': int, 'y': int})
     # print(events.head()['x'])
     # print("Events total: ", num_events)
