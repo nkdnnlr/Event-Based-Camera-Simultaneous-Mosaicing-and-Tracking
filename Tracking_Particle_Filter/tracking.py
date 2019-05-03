@@ -538,7 +538,7 @@ def run():
                           sigma1=sigma_1,
                           sigma2=sigma_2,
                           sigma3=sigma_3,
-                          time_passed=time_passed)
+                          seconds_passed=time_passed)
 
 
     print("Time passed: {} sec".format(time_passed))
