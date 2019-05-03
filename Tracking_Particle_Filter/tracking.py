@@ -68,38 +68,6 @@ def camera_intrinsics():
 
     return K
 
-def load_events(filename, head=None, return_number=False):
-    """
-    Loads events in file specified by filename (txt file)
-    :param filename:
-    :return: events
-    """
-    print("Loading Events")
-    # Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
-    events = pd.read_csv(filename, delimiter=' ', header=head, names=['sec', 'nsec', 'x', 'y', 'pol'])
-    # print("Head: \n", events.head(10))
-    num_events = events.size
-    print("Number of events in file: ", num_events)
-
-    # Remove time of offset
-    first_event_sec = events.loc[0, 'sec']
-    first_event_nsec = events.loc[0, 'nsec']
-    events['t'] = events['sec'] - first_event_sec + 1e-9 * (events['nsec'] - first_event_nsec)
-    events = events[['t', 'x', 'y', 'pol']]
-    # print("Head: \n", events.head(10))
-    # print("Tail: \n", events.tail(10))
-    # print(events['0])
-    if return_number:
-        if head is None:
-            return events, num_events
-        else:
-            return events.head(head), len(events.head(head))
-    else:
-        if head is None:
-            return events
-        else:
-            return events.head(head)
-
 def event_and_particles_to_angles(event, particles, calibration):
     """
     For a given event, generates dataframe
@@ -474,8 +442,6 @@ def mean_of_resampled_particles(particles):
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
 
-    # visualize_particles(particles['Rotation'],mean=mean)
-
 
     '''
     random_x = np.random.randn(400)
@@ -508,15 +474,20 @@ def visualize_particles(rotation_matrices, mean_value = None):
     rotY = vecM.str.get(1)
     rotZ = vecM.str.get(2)
 
-
-    ax = plt.axes(projection='3d')
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
     ax.set_xlim3d(-1, 1)
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
-    ax.scatter3D(rotX, rotY, rotZ, c=rotZ, cmap='copper')
+    p = ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)))
     if mean_value is not None:
         mean_vec = np.dot(mean_value, vec)
-        ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+        q = ax.scatter3D(mean_vec[0],mean_vec[1],mean_vec[2], 'b')
+    cbar = fig.colorbar(p, ax=ax)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    cbar.set_label("Nr. of pose")
 
     plt.show()
 
@@ -570,7 +541,7 @@ def write_quaternions2file(allrotations):
     quaternions['qy'] = quaternion.str.get(1)
     quaternions['qz'] = quaternion.str.get(2)
     quaternions['qw'] = quaternion.str.get(3)
-    quaternions.to_csv(r'quaternions.txt', index=None, header=None, sep=' ', mode='a')
+    quaternions.to_csv(r'quaternions.txt', index=None, sep=' ', mode='a')
 
 def run():
     # num_particles = 20
@@ -579,7 +550,7 @@ def run():
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
-    events, num_events = load_events(event_file, head=total_nr_events_considered, return_number=True)
+    events, num_events = helpers.load_events(event_file, head=total_nr_events_considered, return_number=True)
     events = events.astype({'x': int, 'y': int})
     print(events.head()['x'])
     print("Events total: ", num_events)
@@ -651,7 +622,7 @@ if __name__ == '__main__':
     # print("Events per batch: ", num_events_batch)
     # print("Initialized particles: ", num_particles)
     # calibration = camera_intrinsics()
-    # events, num_events = load_events(event_file, head=1, return_number=True)
+    # events, num_events = helpers.load_events(event_file, head=1, return_number=True)
     # events = events.astype({'x': int, 'y': int})
     # print(events.head()['x'])
     # print("Events total: ", num_events)
