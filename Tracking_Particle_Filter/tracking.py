@@ -41,7 +41,7 @@ sigma_init3=0.05
 sigma_1 = 3.3663987633184266e-05# sigma3 for motion update
 sigma_2 = 3.366410184326084e-05# sigma3 for motion update
 sigma_3 = 0.0005285784750737629 # sigma3 for motion update
-total_nr_events_considered = 60001  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = 300001  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
@@ -546,45 +546,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-    # plot_unitsphere()
-    # plot_unitsphere_matplot()
-
-
-#########TESTING
-
-    # print("Events per batch: ", num_events_batch)
-    # print("Initialized particles: ", num_particles)
-    # calibration = camera_intrinsics()
-    # events, num_events = helpers.load_events(event_file, head=1, return_number=True)
-    # events = events.astype({'x': int, 'y': int})
-    # print(events.head()['x'])
-    # print("Events total: ", num_events)
-    # num_batches = int(np.floor(num_events/num_events_batch))
-    # print("Batches total: ", num_batches)
-    # particles = init_particles(num_particles)
-    # sensortensor = initialize_sensortensor(128, 128)
-    # # print(particles)
-    #
-    # batch_nr = 0
-    # event_nr = 0
-    # t_batch = 0
-    # all_rotations = pd.DataFrame(columns=['t', 'Rotation'])
-    # unit_matrix = np.array([[1,0,0], [0,1,0], [0,0,1]])
-    # all_rotations.loc[batch_nr] = {'t': t_batch,
-    #                                'Rotation': unit_matrix}
-    #
-    #
-    # particles = init_particles(num_particles)
-    # particles = measurement_update(events, particles, all_rotations, sensortensor, calibration)
-    #
-    # particles = normalize_particle_weights(particles)
-    # particles = resampling(particles)
-    #
-    # resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
-    # resampled_particles['Rotation'] = particles['Rotation'].sample(n=num_particles, replace=True,
-    #                                          weights=particles['Weight'], random_state=1)
-    #
-    # resampled_particles['Weight'] = float(1/num_particles)
-    # resampled_particles['Weight'] = resampled_particles['Weight'].astype(object)
-    # resampled_particles = resampled_particles.reset_index(drop=True)
-    # print(resampled_particles)
