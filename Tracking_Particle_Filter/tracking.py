@@ -33,15 +33,15 @@ filename_poses = os.path.join(data_dir, 'poses.txt')
 
 
 # Constants
-num_particles = 100
+num_particles = 200
 num_events_batch = 300
-sigma_init1=0.05
-sigma_init2=0.05
-sigma_init3=0.05
+sigma_init1=0.01
+sigma_init2=0.01
+sigma_init3=0.01
 sigma_1 = 3.3663987633184266e-05# sigma3 for motion update
 sigma_2 = 3.366410184326084e-05# sigma3 for motion update
 sigma_3 = 0.0005285784750737629 # sigma3 for motion update
-total_nr_events_considered = 300001  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = 600001  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
