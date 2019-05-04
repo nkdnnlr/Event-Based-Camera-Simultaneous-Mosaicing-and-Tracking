@@ -192,7 +192,7 @@ if __name__ == '__main__':
     eulerangles = rotmat2eulerangles_df(rotmats)
     # print(eulerangles.head(10))
     print(eulerangles.describe())
-    sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles)
+    sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles, factor=1)
     print(sigma_1)
     print(sigma_2)
     print(sigma_3)

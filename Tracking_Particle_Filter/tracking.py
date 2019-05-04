@@ -33,15 +33,16 @@ filename_poses = os.path.join(data_dir, 'poses.txt')
 
 
 # Constants
-num_particles = 100
+num_particles = 200
 num_events_batch = 300
 sigma_init1=0.05
 sigma_init2=0.05
 sigma_init3=0.05
-sigma_1 = 3.3663987633184266e-05# sigma3 for motion update
-sigma_2 = 3.366410184326084e-05# sigma3 for motion update
-sigma_3 = 0.0005285784750737629 # sigma3 for motion update
-total_nr_events_considered = 60001  #TODO: Only works if not dividable by events by batch
+factor = 2000
+sigma_1 = factor * 3.3663987633184266e-05# sigma1 for motion update
+sigma_2 = factor * 3.366410184326084e-05# sigma2 for motion update
+sigma_3 = factor * 0.0005285784750737629 # sigma3 for motion update
+total_nr_events_considered = 250010  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
@@ -354,6 +355,7 @@ def event_likelihood(z, event, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     :param k_e: minimum constant / noise
     :return: event-likelihood (scalar)
     """
+    #TODO: Test if == or != works better.
     if np.sign(z) == np.sign(event['pol']):
         return k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(np.abs(z) - mu) ** 2 / (2 * sigma) ** 2)
     else:
@@ -436,7 +438,6 @@ def resampling(particles):
 
 def mean_of_resampled_particles(particles):
     '''
-    TODO: Does too much computations: gets matrix for every particle for every particle ;)
     :param particles: pandas df of resampled particles (all with the same weight)
     :return: mean of rotation matrix
     '''
@@ -447,25 +448,15 @@ def mean_of_resampled_particles(particles):
     mean = sp.expm(liemean)
 
 
-    '''
-    random_x = np.random.randn(400)
-    random_y = np.random.randn(400)
-
-    trace = go.Scatter(
-        x=random_x,
-        y=random_y,
-        mode='markers'
-    )
-    data = [trace]
-    # Plot and embed in ipython notebook!
-    plot_url = py.plot(data, filename='basic-line')
-    '''
-
     return mean
 
 
 
 def run():
+    """
+    Runs the experiment, saves and plots output.
+    :return:
+    """
     # num_particles = 20
 
     # plot_unitsphere_matplot()
@@ -526,7 +517,6 @@ def run():
 
     print(batch_nr)
     print(event_nr)
-    visualisation.visualize_particles(mean_of_rotations['Rotation'], mean_value = None)
     datestring = helpers.write_quaternions2file(all_rotations)
     #Include all wished
     time_passed = round(time.time() - starttime)
@@ -542,7 +532,9 @@ def run():
 
 
     print("Time passed: {} sec".format(time_passed))
+    # visualisation.visualize_particles(mean_of_rotations['Rotation'], mean_value = None)
     print("Done")
+
 
 if __name__ == '__main__':
     run()

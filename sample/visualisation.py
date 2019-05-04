@@ -115,8 +115,8 @@ def plot_unitsphere_matplot():
 if __name__ == '__main__':
     #
     poses_theirs = pd.read_csv('poses.txt', names = ['t', 'x','y','z','qx','qy','qz','qw'], delimiter = ' ')
-    poses_ours = pd.read_csv('quaternions.txt', names = ['t','qx','qy','qz','qw'], delimiter = ' ')
+    poses = pd.read_csv('quaternions.txt', names = ['t','qx','qy','qz','qw'], delimiter = ' ')
     poses_ours = helpers.load_poses('quaternions.txt')
     rotations_ours = coordinate_transforms.q2R_df(poses_ours)
     rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
-    compare_trajectories(rotations_ours,rotations_theirs)
+    compare_trajectories(rotations_ours, rotations_theirs)
