@@ -50,7 +50,7 @@ def compare_trajectories(df_ours, df_theirs):
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
     p =ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)),marker=r'$\clubsuit$')
-    q =ax.scatter(rotX_theirs, rotY_theirs, rotZ_theirs, cmap = 'Greens')
+    q =ax.scatter(rotX_theirs, rotY_theirs, rotZ_theirs, s = 0.1, color = 'r')
     cbar = fig.colorbar(p, ax=ax)
     # cbar2 = fig.colorbar(q, ax=ax)
     ax.set_xlabel('X')
@@ -113,10 +113,9 @@ def plot_unitsphere_matplot():
 
 
 if __name__ == '__main__':
-    #
-    poses_theirs = pd.read_csv('poses.txt', names = ['t', 'x','y','z','qx','qy','qz','qw'], delimiter = ' ')
-    poses = pd.read_csv('quaternions.txt', names = ['t','qx','qy','qz','qw'], delimiter = ' ')
-    poses_ours = helpers.load_poses('quaternions.txt')
+
+    poses_ours = helpers.load_poses('quaternions_03052019T190318.txt')
+    poses_theirs = helpers.load_poses('poses.txt', includes_translations=True)
     rotations_ours = coordinate_transforms.q2R_df(poses_ours)
     rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
-    compare_trajectories(rotations_ours, rotations_theirs)
+    compare_trajectories(rotations_ours,rotations_theirs)

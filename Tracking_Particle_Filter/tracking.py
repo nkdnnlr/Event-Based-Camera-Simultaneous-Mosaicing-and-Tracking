@@ -356,7 +356,7 @@ def event_likelihood(z, event, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     :return: event-likelihood (scalar)
     """
     #TODO: Test if == or != works better.
-    if np.sign(z) != np.sign(event['pol']):
+    if np.sign(z) == np.sign(event['pol']):
         return k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(np.abs(z) - mu) ** 2 / (2 * sigma) ** 2)
     else:
         return k_e
