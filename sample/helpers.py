@@ -50,7 +50,9 @@ def load_events(filename, head=None, return_number=False):
     """
     print("Loading Events")
     # Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
-    events = pd.read_csv(filename, delimiter=' ', header=head, names=['sec', 'nsec', 'x', 'y', 'pol'])
+    events = pd.read_csv(filename, delimiter=' ',
+                         header=None,
+                         names=['sec', 'nsec', 'x', 'y', 'pol'])
     # print("Head: \n", events.head(10))
     num_events = events.count()
     print("Number of events in file: ", num_events)
@@ -60,9 +62,7 @@ def load_events(filename, head=None, return_number=False):
     first_event_nsec = events.loc[0, 'nsec']
     events['t'] = events['sec'] - first_event_sec + 1e-9 * (events['nsec'] - first_event_nsec)
     events = events[['t', 'x', 'y', 'pol']]
-    # print("Head: \n", events.head(10))
-    # print("Tail: \n", events.tail(10))
-    # print(events['0])
+
     if return_number:
         if head is None:
             return events, num_events

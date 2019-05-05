@@ -60,18 +60,22 @@ image_width = 2*image_height
 randomseed = None
 
 def camera_intrinsics():
-    '''
-    in: -
-    out: Camera intrinsic Matrix K
-    '''
-    f_x = 115.534  # x-focal length
-    s = 0  # Skewness
-    x_0 = 79.262
-    f_y = 115.565  # y-focal length
-    y_0 = 65.531
+    """
+    Define camera intrinsic matrix and return
+    :return: Camera intrinsic Matrix K
+    """
 
+    # f_x = 115.534  # x-focal length
+    # s = 0  # Skewness
+    # x_0 = 79.262
+    # f_y = 115.565  # y-focal length
+    # y_0 = 65.531
     # K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
-    K = np.array([[91.4014729896821, 0.0, 64.0], [0.0, 91.4014729896821, 64.0], [0, 0, 1]]) #as per guillermo's suggestion
+
+    #from Guillermo:
+    K = np.array([[91.4014729896821, 0.0, 64.0],
+                  [0.0, 91.4014729896821, 64.0],
+                  [0, 0, 1]])
 
     return K
 
@@ -224,13 +228,23 @@ def generate_random_rotmat(unit=False, seed=None):
 
     return M
 
-def init_particles(N, init_rotmat, sigma1, sigma2, sigma3, seed=None):
-    '''
-    in: N = # particles num_particles
-        init_rotmat:  Rotation Matrix of initial pose
-    out: data frame with Index, Rotation matrix and weight
-    '''
-    df = pd.DataFrame(columns=['Rotation', 'Weight', 'theta', 'phi', 'v', 'u', 'pol', 'r_w1', 'r_w2', 'r_w3', 'z'])
+def init_particles(N, init_rotmat, bound1, bound2, bound3, seed=None):
+    """
+    Initialize all particles based on various parameters
+    :param N: # particles num_particles
+    :param init_rotmat: Rotation Matrix of initial pose
+    :param bound1:
+    :param bound2:
+    :param bound3:
+    :param seed:
+    :return: DataFrame with ['Rotation', 'Weight', 'theta', 'phi', 'v', 'u', 'pol', 'r_w1', 'r_w2', 'r_w3', 'z']
+    """
+    df = pd.DataFrame(columns=
+                      ['Rotation', 'Weight', 'theta',
+                       'phi', 'v', 'u', 'pol',
+                       'r_w1', 'r_w2', 'r_w3',
+                       'z']
+                      )
     df['Rotation'] = df['Rotation'].astype(object)
     w0 = 1/N
     G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
@@ -238,14 +252,17 @@ def init_particles(N, init_rotmat, sigma1, sigma2, sigma3, seed=None):
     G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
 
     for i in range(N):
-        n1 = np.random.uniform(-sigma1, sigma1)
-        n2 = np.random.uniform(-sigma2, sigma2)
-        n3 = np.random.uniform(-sigma3, sigma3)
-        df.at[i,['Rotation']] = [ np.dot( init_rotmat , sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))) ]
+        n1 = np.random.uniform(-bound1, bound1)
+        n2 = np.random.uniform(-bound2, bound2)
+        n3 = np.random.uniform(-bound3, bound3)
+        df.at[i, ['Rotation']] = [np.dot(init_rotmat, sp.expm(np.dot(n1, G1) +
+                                                             np.dot(n2, G2) +
+                                                             np.dot(n3, G3))
+                                        )
+                                 ]
         df.at[i, ['Weight']] = float(w0)
     return df
 
-    # print(events)
 
 ### PARTICLE FILTER ###
 
@@ -255,38 +272,25 @@ def init_particles(N, init_rotmat, sigma1, sigma2, sigma3, seed=None):
 
 ##initialize num_particles particles
 
-def motion_update(particles, tau, seed=None):
+def motion_update(particles, tau):
     """
-
-    :param particles: DataFrame
-    :param tau: timestep #TODO: is this tau in seconds?
-    :return: updated particles
+    Randomly (normal) perturbs particles.
+    :param particles: DataFrame with particles
+    :param tau: timestep
+    :return: DataFrame with updated particles
     """
-    if seed is not None:
-        np.random.seed(seed)
+    # particles = particles.copy()
 
-    updated_particles = particles.copy()  # type: object
     G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])  # rotation around x
     G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])  # rotation around y
     G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])  # rotation around z
-    # TODO: update sigma_3 and tau!!
-    sigma1 = sigma_1
-    sigma2 = sigma_2
-    sigma3 = sigma_3
-    # p_u=[]
-    # for i in range(len(particles)):
-        # n1 = np.random.normal(0.0, sigma1**2 * tau)
-        # n2 = np.random.normal(0.0, sigma2**2 * tau)
-        # n3 = np.random.normal(0.0, sigma3**2 * tau)
-        # p_u.append(np.dot(particle[i], sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))))
-    updated_particles['Rotation'] = updated_particles['Rotation'].apply(
-        lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma3**2 * tau), G1) +
-                                    np.dot(np.random.normal(0.0, sigma3**2 * tau), G2) +
-                                    np.dot(np.random.normal(0.0, sigma3**2 * tau), G3))))
 
-    #print(updated_particles['Rotation'])
+    particles['Rotation'] = particles['Rotation'].apply(
+        lambda x: np.dot(x, sp.expm(np.dot(np.random.normal(0.0, sigma_1**2 * tau * num_events_batch), G1) +
+                                    np.dot(np.random.normal(0.0, sigma_2**2 * tau * num_events_batch), G2) +
+                                    np.dot(np.random.normal(0.0, sigma_3**2 * tau * num_events_batch), G3))))
 
-    return updated_particles
+    return particles
 
 def initialize_sensortensor(sensor_height, sensor_width):
     """
@@ -459,44 +463,46 @@ def run():
     Runs the experiment, saves and plots output.
     :return:
     """
-    # num_particles = 20
-
-    # plot_unitsphere_matplot()
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
-    events, num_events = helpers.load_events(event_file, head=total_nr_events_considered, return_number=True)
+    events, num_events = helpers.load_events(event_file,
+                                             head=total_nr_events_considered,
+                                             return_number=True)
     events = events.astype({'x': int, 'y': int})
-    print(events.head()['x'])
+    print(events.head(5))
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
 
-    particles = init_particles(num_particles, first_matrix, sigma_init1 , sigma_init2, sigma_init3,  seed=None)
+    particles = init_particles(num_particles, first_matrix,
+                               sigma_init1, sigma_init2, sigma_init3,
+                               seed=None)
 
     sensortensor = initialize_sensortensor(128, 128)
-    # print(particles)
 
     batch_nr = 0
     event_nr = 0
     t_batch = 0
     all_rotations = pd.DataFrame(columns=['t', 'Rotation'])
-    unit_matrix = np.array([[1,0,0], [0,1,0], [0,0,1]])
     all_rotations.loc[batch_nr] = {'t': t_batch,
-                                   'Rotation': unit_matrix}
-    # print(all_rotations)
-    # exit()
+                                   'Rotation': first_matrix}
+
     print("Start tracker!")
     starttime = time.time()
-    mean_of_rotations = pd.DataFrame(columns = ['Rotation'])
+
+    mean_of_rotations = pd.DataFrame(columns=['Rotation'])
     mean_of_rotations['Rotation'].astype(object)
+
     while batch_nr < num_batches:
         events_batch = events[event_nr:event_nr + num_events_batch]
-        t_batch = events.loc[event_nr]['t']
         dt_batch = (events_batch['t'].max() - events_batch['t'].min())/num_events_batch
-        # print("t_batch: {} sec".format(t_batch))
-        # print("dt_batch: {} sec".format(dt_batch))
-        particles = measurement_update(events_batch, particles, all_rotations, sensortensor, calibration)
+        particles = motion_update(particles, tau=dt_batch)
+        particles = measurement_update(events_batch,
+                                       particles,
+                                       all_rotations,
+                                       sensortensor,
+                                       calibration)
         particles = normalize_particle_weights(particles)
         particles = resampling(particles)
 
@@ -513,7 +519,6 @@ def run():
         print("time: ", t_batch, "Rotations: ", helpers.rotmat2quaternion(new_rotation))
 
         print("batch: {} time: {}".format(batch_nr, t_batch))
-        particles = motion_update(particles, tau=dt_batch, seed=None)
 
         mean_of_rotations.loc[batch_nr] = [new_rotation]
 
