@@ -510,7 +510,8 @@ def run():
 
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
-        # print("time: ", t_batch, "Rotations: ", helpers.rotmat2quaternion(new_rotation))
+        print("time: ", t_batch, "Rotations: ", helpers.rotmat2quaternion(new_rotation))
+
         print("batch: {} time: {}".format(batch_nr, t_batch))
         particles = motion_update(particles, tau=dt_batch, seed=None)
 
