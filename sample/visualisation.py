@@ -17,13 +17,6 @@ import matplotlib.pyplot as plt
 import sample.coordinate_transforms as coordinate_transforms
 import sample.helpers as helpers
 
-def load_file(filename, names = None):
-
-    dataframe = pd.read_csv(filename, columns=names, delimiter = ' ')
-
-    return dataframe
-
-
 def compare_trajectories(df_ours, df_theirs):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
@@ -60,6 +53,12 @@ def compare_trajectories(df_ours, df_theirs):
     cbar.set_label("Nr. of pose")
 
     plt.show()
+
+def cut_df_wrt_time(rotations_ours, rotations_theirs):
+    t_max = rotations_ours['t'].max()
+    rotations_theirs_cut = rotations_theirs[rotations_theirs['t'] < t_max]
+
+    return rotations_theirs_cut
 
 
 def visualize_particles(rotation_matrices, mean_value = None):
@@ -122,4 +121,6 @@ if __name__ == '__main__':
                                       includes_translations=True)
     rotations_ours = coordinate_transforms.q2R_df(poses_ours)
     rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
-    compare_trajectories(rotations_ours,rotations_theirs)
+    rotations_theirs_cut = cut_df_wrt_time(rotations_ours, rotations_theirs)
+
+    compare_trajectories(rotations_ours,rotations_theirs_cut)
