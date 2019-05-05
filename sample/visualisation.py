@@ -1,3 +1,4 @@
+import os
 import time
 import sys
 import math
@@ -49,8 +50,8 @@ def compare_trajectories(df_ours, df_theirs):
     ax.set_xlim3d(-1, 1)
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
-    p =ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)),marker=r'$\clubsuit$')
     q =ax.scatter(rotX_theirs, rotY_theirs, rotZ_theirs, s = 0.1, color = 'r')
+    p =ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)),marker=r'$\clubsuit$')
     cbar = fig.colorbar(p, ax=ax)
     # cbar2 = fig.colorbar(q, ax=ax)
     ax.set_xlabel('X')
@@ -113,9 +114,12 @@ def plot_unitsphere_matplot():
 
 
 if __name__ == '__main__':
-
-    poses_ours = helpers.load_poses('quaternions_04052019T155445.txt')
-    poses_theirs = helpers.load_poses('poses.txt', includes_translations=True)
+    directory_poses = '../output/poses/'
+    filename_ours = 'quaternions_04052019T190443.txt'
+    filename_theirs = 'poses.txt'
+    poses_ours = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_ours))
+    poses_theirs = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_theirs),
+                                      includes_translations=True)
     rotations_ours = coordinate_transforms.q2R_df(poses_ours)
     rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
     compare_trajectories(rotations_ours,rotations_theirs)

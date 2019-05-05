@@ -132,7 +132,7 @@ def get_sigmas(eulerangles, all_events=3564657, batch_size=300, factor=1):
     return sigma_1, sigma_2, sigma_3
 
 
-def write_quaternions2file(allrotations):
+def write_quaternions2file(allrotations, directory):
     """
     Converts rotations to quaternions and saves in quaternions_[datestring].csv
     :param allrotations: all rotations
@@ -142,6 +142,7 @@ def write_quaternions2file(allrotations):
     now = datetime.datetime.now()
     datestring = now.strftime("%d%m%YT%H%M%S")
     filename = 'quaternions_' + datestring + '.txt'
+    filename = os.path.join(directory, filename)
 
     # Makes DataFrame with quaternions
     quaternions = pd.DataFrame(columns = ['t','qx','qy','qz','qw'])
@@ -156,7 +157,7 @@ def write_quaternions2file(allrotations):
     quaternions.to_csv(filename, index=None, header=None, sep=' ', mode='a')
     return datestring
 
-def write_logfile(datestring, **kwargs):
+def write_logfile(datestring, directory, **kwargs):
     """
     Writes logfile from metadata
     :param datestring:
@@ -164,6 +165,8 @@ def write_logfile(datestring, **kwargs):
     :return:
     """
     filename = 'quaternions_' + datestring + '.log'
+    filename = os.path.join(directory, filename)
+
 
     with open(filename, 'a') as the_file:
         the_file.write("{0}: {1}\n".format('Datestring', datestring))
@@ -192,7 +195,7 @@ if __name__ == '__main__':
     eulerangles = rotmat2eulerangles_df(rotmats)
     # print(eulerangles.head(10))
     print(eulerangles.describe())
-    sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles)
+    sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles, factor=1)
     print(sigma_1)
     print(sigma_2)
     print(sigma_3)
