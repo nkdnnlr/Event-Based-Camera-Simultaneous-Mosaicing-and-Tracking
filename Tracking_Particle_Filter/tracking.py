@@ -88,31 +88,24 @@ def event_and_particles_to_angles(event, particles, calibration):
     :param calibration: camera calibration
     :return: DataFrame with particles as rows and angles as columns.
     """
+    k_inv_times_event = np.dot(np.linalg.inv(calibration),
+                           np.array([[event['x']], [event['y']], [1]])
+                           ) #from camera frame (u,v) to world reference frame
 
-    event_times_K = np.dot(np.linalg.inv(calibration), np.array([[event['x']], [event['y']], [1]])) #from camera frame (u,v) to world reference frame
     coordinates = ['r_w1', 'r_w2', 'r_w3']
-    # df_coordinates = pd.DataFrame()
-    # df_coordinates[coordinates] = pd.DataFrame.from_records(df_rotationmatrices.apply(lambda x: np.dot(x, event_times_K)))
-    particles[coordinates] = pd.DataFrame.from_records(particles['Rotation'].apply(lambda x: np.dot(x, event_times_K)))
-    # df_coordinates = pd.DataFrame.from_records(df_rotationmatrices.apply(lambda x: np.dot(x, event_times_K)),
-    #                                            columns=coordinates)
+    particles[coordinates] = pd.DataFrame.from_records(particles['Rotation'].apply(lambda x: np.dot(x, k_inv_times_event)))
 
     particles['r_w1'] = particles['r_w1'].str.get(0)  # ATTENTION: This is tested and correct. str.get(0) just removes brackets. See output above.
     particles['r_w2'] = particles['r_w2'].str.get(0)
     particles['r_w3'] = particles['r_w3'].str.get(0)
 
     # from world reference frame to rotational frame (theta, phi)
-    # df_angles = pd.DataFrame(columns=['theta', 'phi'])
-    # df_angles['theta'] = np.arctan(df_coordinates['r_w1'] / df_coordinates['r_w3'])
-    # df_angles['phi'] = np.arctan(df_coordinates['r_w2'] / np.sqrt(df_coordinates['r_w1']**2 + df_coordinates['r_w3']**2))
+    particles['theta'] = np.arctan2(particles['r_w1'], particles['r_w3'])
+    particles['phi'] = np.arctan2(particles['r_w2'], np.sqrt(particles['r_w1'] ** 2 + particles['r_w3'] ** 2))
 
-    particles['theta'] = np.arctan(particles['r_w1'] / particles['r_w3'])
-    particles['phi'] = np.arctan(particles['r_w2'] / np.sqrt(particles['r_w1'] ** 2 + particles['r_w3'] ** 2))
+    return
 
-    return particles
-    # return df_angles
-
-def event_and_oneparticle_to_angles(event, particle, calibration):
+def event_and_oneparticle_to_angles(event, particle, calibration_inv):
     """
     For a given event, generates dataframe
     with particles as rows and angles as columns.
@@ -121,7 +114,7 @@ def event_and_oneparticle_to_angles(event, particle, calibration):
     :param calibration: camera calibration
     :return: DataFrame with particles as rows and angles as columns.
     """
-    event_times_K = np.dot(np.linalg.inv(calibration), np.array([[event['x']], [event['y']], [1]])) #from camera frame (u,v) to world reference frame
+    event_times_K = np.dot(calibration_inv, np.array([[event['x']], [event['y']], [1]])) #from camera frame (u,v) to world reference frame
     r_w1, r_w2, r_w3 = np.dot(particle['Rotation'], event_times_K)
     r_w1 = r_w1[0]
     r_w2 = r_w2[0]
@@ -142,8 +135,8 @@ def angles2map(theta, phi, height=1024, width=2048):
     :param width: width of image in pixels
     :return: tuple with integer map points (pixel coordinates)
     """
-    v = -1*(np.floor((-1*phi+np.pi/2)/np.pi*height))+height
-    # v = np.floor((np.pi / 2 - phi) / np.pi * height) # jb's version
+    # v = np.floor((-1*phi+np.pi/2)/np.pi*height)
+    v = np.floor((np.pi / 2 - phi) / np.pi * height) # jb's version
     u = np.floor((theta + np.pi)/(2*np.pi)*width)
     return v, u
 
@@ -157,7 +150,7 @@ def angles2map_df(particles, height=1024, width=2048):
     :param width: width of image in pixels
     :return: particles
     """
-    particles['v'] = particles['phi'].apply(lambda angle: -1*(np.floor((-1*angle+np.pi/2)/np.pi*height))+height)
+    particles['v'] = particles['phi'].apply(lambda angle: np.floor((-1*angle+np.pi/2)/np.pi*height))
     particles['u'] = particles['theta'].apply(lambda angle: np.floor((angle + np.pi)/(2*np.pi)*width))
     return particles
 
@@ -174,7 +167,7 @@ def angles2map_series(particle, height=1024, width=2048):
     particle['u'] = np.floor((particle['theta'] + np.pi)/(2*np.pi)*width)
     return particle
 
-def particles_per_event2map(event, particles, calibration):
+def particles_per_event2map(event, particles, calibration_inv):
     """
     For each event, gets map angles and coordinates (for on panoramic image)
     :param event: one event
@@ -182,20 +175,20 @@ def particles_per_event2map(event, particles, calibration):
     :param calibration:
     :return:  DataFrame with particles as rows and as columns theta, phi, v, u (coordinates)
     """
-    particles = event_and_particles_to_angles(event, particles, calibration)
+    event_and_particles_to_angles(event, particles, calibration_inv)
     particles = angles2map_df(particles)
     particles['pol'] = event['pol']
     return particles
 
-def oneparticle_per_event2map(event, particle, calibration):
+def oneparticle_per_event2map(event, particle, calibration_inv):
     """
     For each event, gets map angles and coordinates (for on panoramic image)
     :param event: one event
     :param particles: dataframe with particles
-    :param calibration:
+    :param calibration_inv:
     :return:  DataFrame with particles as rows and as columns theta, phi, v, u (coordinates)
     """
-    theta, phi = event_and_oneparticle_to_angles(event, particle, calibration)
+    theta, phi = event_and_oneparticle_to_angles(event, particle, calibration_inv)
     v, u = angles2map(theta, phi)
     particle['v'] = v
     particle['u'] = u
@@ -292,7 +285,7 @@ def motion_update(particles, tau):
 
     return particles
 
-def initialize_sensortensor(sensor_height, sensor_width):
+def initialize_sensortensor(sensor_height=128, sensor_width=128):
     """
     Initializes sensortensor, which is a
     tensor of size  2 x sensorwidth x sensorheight,
@@ -338,15 +331,6 @@ def get_latest_particles(t_asked, particles_all_time):
     # t_particles = math.floor(t_asked * dt_pos_inv) / dt_pos
     return particles_all_time[particles_all_time['t'] <= t_asked].iloc[-1]
 
-def get_intensity_from_gradientmap(gradientmap, u, v):
-    """
-    Gets
-    :param gradientmap:
-    :param x:
-    :param y:
-    :return:
-    """
-    return gradientmap[v, u]
 
 def event_likelihood(z, event, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     """
@@ -371,24 +355,25 @@ def measurement_update(events_batch,
                        particles,
                        all_rotations,
                        sensortensor,
-                       calibration):
+                       calibration_inv):
     """
 
     :param events_batch: events of a batch
     :param particles: particles
     :param all_rotations: DataFrame containing one time and one rotation per batch.
     :param sensortensor:
-    :param calibration:
+    :param calibration_inv:
     :return: particles
     """
     particles['Weight'] = np.empty((len(particles), 0)).tolist()
+
     for idx, event in events_batch.iterrows():
         update_sensortensor(sensortensor, event)
-        particles = particles_per_event2map(event, particles, calibration)
+        particles = particles_per_event2map(event, particles, calibration_inv)
         tminustc = sensortensor[1][int(event['y']), int(event['x'])][0]
         particle_ttc = get_latest_particles(tminustc,
                                             particles_all_time=all_rotations)  # single rotationmatrix before ttc
-        particle_ttc = oneparticle_per_event2map(event, particle_ttc, calibration)
+        particle_ttc = oneparticle_per_event2map(event, particle_ttc, calibration_inv)
         u_ttc = particle_ttc['u']
         v_ttc = particle_ttc['v']
         particles['logintensity_ttc'] = intensity_map[int(v_ttc-1), int(u_ttc-1)]
@@ -466,6 +451,7 @@ def run():
     print("Events per batch: ", num_events_batch)
     print("Initialized particles: ", num_particles)
     calibration = camera_intrinsics()
+    calibration_inv = np.linalg.inv(calibration)
     events, num_events = helpers.load_events(event_file,
                                              head=total_nr_events_considered,
                                              return_number=True)
@@ -502,7 +488,7 @@ def run():
                                        particles,
                                        all_rotations,
                                        sensortensor,
-                                       calibration)
+                                       calibration_inv)
         particles = normalize_particle_weights(particles)
         particles = resampling(particles)
 
@@ -516,7 +502,7 @@ def run():
 
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
-        print("time: ", t_batch, "Rotations: ", helpers.rotmat2quaternion(new_rotation))
+        # print("time: ", t_batch, "Rotations: ", helpers.rotmat2quaternion(new_rotation))
 
         print("batch: {} time: {}".format(batch_nr, t_batch))
 
