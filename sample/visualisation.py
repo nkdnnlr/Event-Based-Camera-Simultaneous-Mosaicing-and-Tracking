@@ -114,7 +114,7 @@ def plot_unitsphere_matplot():
 
 if __name__ == '__main__':
 
-    poses_ours = helpers.load_poses('quaternions_03052019T190318.txt')
+    poses_ours = helpers.load_poses('quaternions_04052019T155445.txt')
     poses_theirs = helpers.load_poses('poses.txt', includes_translations=True)
     rotations_ours = coordinate_transforms.q2R_df(poses_ours)
     rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
