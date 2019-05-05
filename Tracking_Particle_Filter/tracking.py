@@ -31,6 +31,8 @@ intensity_map = np.load('../output/intensity_map.npy')
 event_file = os.path.join(data_dir, 'events.txt')
 filename_poses = os.path.join(data_dir, 'poses.txt')
 
+outputdir_poses = '../output/poses/'
+
 
 # Constants
 num_particles = 200
@@ -517,10 +519,11 @@ def run():
 
     print(batch_nr)
     print(event_nr)
-    datestring = helpers.write_quaternions2file(all_rotations)
+    datestring = helpers.write_quaternions2file(all_rotations,
+                                                directory='../output/poses/')
     #Include all wished
     time_passed = round(time.time() - starttime)
-    helpers.write_logfile(datestring,
+    helpers.write_logfile(datestring, directory= '../output/poses/',
                           experiment='find_optimal_parameters',
                           num_particles=num_particles,
                           num_events=total_nr_events_considered,
