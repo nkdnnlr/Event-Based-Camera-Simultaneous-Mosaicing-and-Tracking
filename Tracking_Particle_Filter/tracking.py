@@ -35,16 +35,17 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
+eventlikelihood_comparison_flipped = True
 num_particles = 200
-num_events_batch = 100
-sigma_init1=0.05
-sigma_init2=0.05
-sigma_init3=0.05
-factor = 0.5
+num_events_batch = 300
+sigma_init1 = 0.05
+sigma_init2 = 0.05
+sigma_init3 = 0.05
+factor = 1
 sigma_1 = factor * 3.3663987633184266e-05# sigma1 for motion update
 sigma_2 = factor * 3.366410184326084e-05# sigma2 for motion update
 sigma_3 = factor * 0.0005285784750737629 # sigma3 for motion update
-total_nr_events_considered = 50010  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = 100010  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
@@ -108,8 +109,8 @@ def init_particles(N, init_rotmat, bound1, bound2, bound3, seed=None):
         n2 = np.random.uniform(-bound2, bound2)
         n3 = np.random.uniform(-bound3, bound3)
         df.at[i, ['Rotation']] = [np.dot(init_rotmat, sp.expm(np.dot(n1, G1) +
-                                                             np.dot(n2, G2) +
-                                                             np.dot(n3, G3))
+                                                              np.dot(n2, G2) +
+                                                              np.dot(n3, G3))
                                         )
                                  ]
         df.at[i, ['Weight']] = float(w0)
@@ -125,7 +126,6 @@ def initialize_sensortensor(sensor_height=128, sensor_width=128):
     :param sensor_width:
     :return: initial sensortensor np.array([.. ])->128*128 pixels
     """
-
     sensortensor_t = np.zeros((sensor_height, sensor_width),
                           dtype=[('time', 'f8'), ('polarity', 'i4')])
     sensortensor_tc = np.zeros((sensor_height, sensor_width),
@@ -345,10 +345,16 @@ def event_likelihood(z, event, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
     :return: event-likelihood (scalar)
     """
     #TODO: Test if == or != works better. -> Seems as != looks better, see slack!
-    if np.sign(z) != np.sign(event['pol']):
-        return k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(np.abs(z) - mu) ** 2 / (2 * sigma) ** 2)
+    if eventlikelihood_comparison_flipped:
+        if np.sign(z) != np.sign(event['pol']):
+            return k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(np.abs(z) - mu) ** 2 / (2 * sigma) ** 2)
+        else:
+            return k_e
     else:
-        return k_e
+        if np.sign(z) == np.sign(event['pol']):
+            return k_e + 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(np.abs(z) - mu) ** 2 / (2 * sigma) ** 2)
+        else:
+            return k_e
 
 
 def measurement_update(events_batch,
@@ -383,9 +389,6 @@ def measurement_update(events_batch,
         particles['z'] = particles['logintensity_t'] - particles['logintensity_ttc']
         particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z, event)], axis=1)
     particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x)) #Tested
-
-
-    # print(particles['Weight'])
 
     return particles
 
@@ -526,6 +529,7 @@ def run():
     helpers.write_logfile(datestring, directory= '../output/poses/',
                           experiment='find_optimal_parameters',
                           remark='Comparison in Event likelihood fkt set to != ',
+                          eventlikelihood_comparison_flipped=eventlikelihood_comparison_flipped,
                           num_particles=num_particles,
                           num_events=total_nr_events_considered,
                           num_events_per_batch=num_events_batch,

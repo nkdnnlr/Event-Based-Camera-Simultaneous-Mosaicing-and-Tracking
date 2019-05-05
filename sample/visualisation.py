@@ -43,9 +43,9 @@ def compare_trajectories(df_ours, df_theirs):
     ax.set_xlim3d(-1, 1)
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
-    q =ax.scatter(rotX_theirs, rotY_theirs, rotZ_theirs, s = 0.1, color = 'r')
+    q =ax.scatter(rotX_theirs, rotY_theirs, rotZ_theirs, s = 1, color = 'r')
     ax.scatter(rotX_theirs[0], rotY_theirs[0], rotZ_theirs[0], s=10, color = 'm', marker = 'D')
-    p =ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)), s=0.5 )
+    p =ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)), s=2 )
     cbar = fig.colorbar(p, ax=ax)
     # cbar2 = fig.colorbar(q, ax=ax)
     ax.set_xlabel('X')
@@ -115,7 +115,7 @@ def plot_unitsphere_matplot():
 
 if __name__ == '__main__':
     directory_poses = '../output/poses/'
-    filename_ours = 'quaternions_05052019T181038.txt'
+    filename_ours = 'quaternions_05052019T212524.txt'
     filename_theirs = 'poses.txt'
     poses_ours = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_ours))
     poses_theirs = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_theirs),
