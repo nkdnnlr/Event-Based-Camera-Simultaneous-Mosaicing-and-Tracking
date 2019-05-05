@@ -21,7 +21,7 @@ events.iloc[[1]].apply(lambda r: check_and_write(r))
 '''
 
 for i in range(3624659):
-    print(i)
+    # print(i)
     if events.iloc[[i]]['x'].values <= size and events.iloc[[i]]['y'].values <= size:
         events_small_sensor = events_small_sensor.append(events.iloc[[i]])
     else:
