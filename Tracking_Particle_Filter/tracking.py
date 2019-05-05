@@ -35,7 +35,7 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
-num_particles = 200
+num_particles = 100
 num_events_batch = 300
 sigma_init1=0.05
 sigma_init2=0.05
@@ -44,7 +44,7 @@ factor = 5
 sigma_1 = factor * 3.3663987633184266e-05# sigma1 for motion update
 sigma_2 = factor * 3.366410184326084e-05# sigma2 for motion update
 sigma_3 = factor * 0.0005285784750737629 # sigma3 for motion update
-total_nr_events_considered = 50010  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = 20010  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
@@ -102,6 +102,10 @@ def event_and_particles_to_angles(event, particles, calibration):
     # from world reference frame to rotational frame (theta, phi)
     particles['theta'] = np.arctan2(particles['r_w1'], particles['r_w3'])
     particles['phi'] = np.arctan2(particles['r_w2'], np.sqrt(particles['r_w1'] ** 2 + particles['r_w3'] ** 2))
+    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+    #
+    #     print(event['x'].min(), event['x'].max())
+    # exit()
 
     return
 
@@ -140,6 +144,7 @@ def angles2map(theta, phi, height=1024, width=2048):
     u = np.floor((theta + np.pi)/(2*np.pi)*width)
     return v, u
 
+
 def angles2map_df(particles, height=1024, width=2048):
     """
     USED FOR COLLECTION OF PARTICLES
@@ -149,10 +154,19 @@ def angles2map_df(particles, height=1024, width=2048):
     :param height: height of image in pixels
     :param width: width of image in pixels
     :return: particles
+
     """
+    # def phi_to_v(angles, height):
+    #
+    #     v= np.floor((-1 * angles + np.pi / 2) / np.pi * height)
+    #     return v
+    #
+    # particles['v'] = phi_to_v(particles['phi'], height)
     particles['v'] = particles['phi'].apply(lambda angle: np.floor((-1*angle+np.pi/2)/np.pi*height))
     particles['u'] = particles['theta'].apply(lambda angle: np.floor((angle + np.pi)/(2*np.pi)*width))
     return particles
+
+
 
 def angles2map_series(particle, height=1024, width=2048):
     """
@@ -456,13 +470,13 @@ def run():
                                              head=total_nr_events_considered,
                                              return_number=True)
     events = events.astype({'x': int, 'y': int})
-    print(events.head(5))
+    print(events.describe())
     print("Events total: ", num_events)
     num_batches = int(np.floor(num_events/num_events_batch))
     print("Batches total: ", num_batches)
 
     particles = init_particles(num_particles, first_matrix,
-                               sigma_init1, sigma_init2, sigma_init3,
+                               1, 1, 1,
                                seed=None)
 
     sensortensor = initialize_sensortensor(128, 128)
