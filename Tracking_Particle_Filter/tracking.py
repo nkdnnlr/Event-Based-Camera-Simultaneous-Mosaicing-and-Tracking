@@ -33,15 +33,16 @@ filename_poses = os.path.join(data_dir, 'poses.txt')
 
 
 # Constants
-num_particles = 200
-num_events_batch = 300
+num_particles = 100
+num_events_batch = 10
 sigma_init1=0.01
 sigma_init2=0.01
 sigma_init3=0.01
 sigma_1 = 3.3663987633184266e-05# sigma3 for motion update
 sigma_2 = 3.366410184326084e-05# sigma3 for motion update
 sigma_3 = 0.0005285784750737629 # sigma3 for motion update
-total_nr_events_considered = 600001  #TODO: Only works if not dividable by events by batch
+sigma_3 = 0.00005 # sigma3 for motion update
+total_nr_events_considered = 2001  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
@@ -517,7 +518,8 @@ def run():
 
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
-        # print("time: ", t_batch, "Rotations: ", helpers.rotmat2quaternion(new_rotation))
+        print("time: ", t_batch, "Rotations: ", helpers.rotmat2quaternion(new_rotation))
+
         print("batch: {} time: {}".format(batch_nr, t_batch))
         particles = motion_update(particles, tau=dt_batch, seed=None)
 
