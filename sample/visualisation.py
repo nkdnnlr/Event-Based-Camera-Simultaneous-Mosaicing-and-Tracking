@@ -1,3 +1,4 @@
+import os
 import time
 import sys
 import math
@@ -15,13 +16,6 @@ matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import sample.coordinate_transforms as coordinate_transforms
 import sample.helpers as helpers
-
-def load_file(filename, names = None):
-
-    dataframe = pd.read_csv(filename, columns=names, delimiter = ' ')
-
-    return dataframe
-
 
 def compare_trajectories(df_ours, df_theirs):
     """
@@ -49,8 +43,8 @@ def compare_trajectories(df_ours, df_theirs):
     ax.set_xlim3d(-1, 1)
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
+    q =ax.scatter(rotX_theirs, rotY_theirs, rotZ_theirs, s = 0.1, color = 'r')
     p =ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)),marker=r'$\clubsuit$')
-    q =ax.scatter(rotX_theirs, rotY_theirs, rotZ_theirs, cmap = 'Greens')
     cbar = fig.colorbar(p, ax=ax)
     # cbar2 = fig.colorbar(q, ax=ax)
     ax.set_xlabel('X')
@@ -59,6 +53,12 @@ def compare_trajectories(df_ours, df_theirs):
     cbar.set_label("Nr. of pose")
 
     plt.show()
+
+def cut_df_wrt_time(rotations_ours, rotations_theirs):
+    t_max = rotations_ours['t'].max()
+    rotations_theirs_cut = rotations_theirs[rotations_theirs['t'] < t_max]
+
+    return rotations_theirs_cut
 
 
 def visualize_particles(rotation_matrices, mean_value = None):
@@ -113,10 +113,14 @@ def plot_unitsphere_matplot():
 
 
 if __name__ == '__main__':
-    #
-    poses_theirs = pd.read_csv('poses.txt', names = ['t', 'x','y','z','qx','qy','qz','qw'], delimiter = ' ')
-    poses_ours = pd.read_csv('quaternions.txt', names = ['t','qx','qy','qz','qw'], delimiter = ' ')
-    poses_ours = helpers.load_poses('quaternions.txt')
+    directory_poses = '../output/poses/'
+    filename_ours = 'quaternions_04052019T190443.txt'
+    filename_theirs = 'poses.txt'
+    poses_ours = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_ours))
+    poses_theirs = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_theirs),
+                                      includes_translations=True)
     rotations_ours = coordinate_transforms.q2R_df(poses_ours)
     rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
-    compare_trajectories(rotations_ours,rotations_theirs)
+    rotations_theirs_cut = cut_df_wrt_time(rotations_ours, rotations_theirs)
+
+    compare_trajectories(rotations_ours,rotations_theirs_cut)
