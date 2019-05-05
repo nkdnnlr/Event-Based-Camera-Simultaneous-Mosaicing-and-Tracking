@@ -1,0 +1,10 @@
+Datestring: 05052019T190719
+experiment: find_optimal_parameters
+remark: Comparison in Event likelihood fkt set to != 
+num_particles: 200
+num_events: 100010
+num_events_per_batch: 300
+sigma1: 6.732797526636853e-05
+sigma2: 6.732820368652169e-05
+sigma3: 0.0010571569501475258
+seconds_passed: 3185
