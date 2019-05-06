@@ -35,17 +35,18 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
+
 eventlikelihood_comparison_flipped = True
-num_particles = 200
-num_events_batch = 300
-sigma_init1 = 0.05
-sigma_init2 = 0.05
-sigma_init3 = 0.05
-factor = 1
+num_particles = 1000
+num_events_batch = 10
+sigma_init1 = 0.1
+sigma_init2 = 0.1
+sigma_init3 = 0.1
+factor = 5
 sigma_1 = factor * 3.3663987633184266e-05# sigma1 for motion update
 sigma_2 = factor * 3.366410184326084e-05# sigma2 for motion update
 sigma_3 = factor * 0.0005285784750737629 # sigma3 for motion update
-total_nr_events_considered = 100010  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = 10010  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
@@ -411,30 +412,28 @@ def resampling(particles):
     :return: resampled particles, weighted average
     '''
 
-    sum_of_weights=particles['Weight'].cumsum(axis=0)
+    # sum_of_weights=particles['Weight'].cumsum(axis=0)
 
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
-    # resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
-    # resampled_particles['Weight'] = resampled_particles['Weight'].astype(object)
-    #
-    # resampled_particles['Rotation'] = particles['Rotation'].sample(n=num_particles, replace=True,
-    #                                                            weights=particles['Weight'], random_state=1)
-    # resampled_particles['Weight'] = float(1 / num_particles)
-    # resampled_particles = resampled_particles.reset_index(drop=True)
-    # #
-    for i in range(len(particles)):     # i: resampling for each particle
-        r = np.random.uniform(0, 1)
-        for n in range(len(particles)):
-            if sum_of_weights[n] >= r and n==0:
-                n_tilde=n
-                continue
-            if sum_of_weights[n] >= r and r > sum_of_weights[n - 1]:
-                n_tilde=n
-                continue
 
-        resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
-        resampled_particles.at[i, ['Weight']] = float(1/len(particles))
-        resampled_particles['Weight'] = resampled_particles['Weight'].astype('float64')
+    resampled_particles['Rotation'] = particles['Rotation'].sample(n=len(particles), replace=True,
+                                                              weights=particles['Weight'], random_state=1)
+    resampled_particles['Weight'] = float(1 / len(particles))
+    resampled_particles = resampled_particles.reset_index(drop=True)
+
+    # for i in range(len(particles)):     # i: resampling for each particle
+    #     r = np.random.uniform(0, 1)
+    #     for n in range(len(particles)):
+    #         if sum_of_weights[n] >= r and n==0:
+    #             n_tilde=n
+    #             break
+    #         if sum_of_weights[n] >= r and r > sum_of_weights[n - 1]:
+    #             n_tilde=n
+    #             break
+    #
+    #     resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
+    #     resampled_particles.at[i, ['Weight']] = float(1/len(particles))
+    #     resampled_particles['Weight'] = resampled_particles['Weight'].astype('float64')
 
     return resampled_particles
 
@@ -445,10 +444,9 @@ def mean_of_resampled_particles(particles):
     '''
     rotmats=np.zeros((len(particles),3,3))
     for i in range(len(particles)):
-        rotmats[i] = sp.logm(particles['Rotation'].as_matrix()[i])
+        rotmats[i] = sp.logm(particles['Rotation'].values()[i])
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
-
 
     return mean
 
@@ -500,7 +498,8 @@ def run():
                                        all_rotations,
                                        sensortensor,
                                        calibration_inv)
-        particles = normalize_particle_weights(particles)
+
+        # particles = normalize_particle_weights(particles)
         particles = resampling(particles)
 
         event_nr += num_events_batch
