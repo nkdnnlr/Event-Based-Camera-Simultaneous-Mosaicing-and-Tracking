@@ -35,18 +35,18 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
-
 eventlikelihood_comparison_flipped = True
 num_particles = 1000
-num_events_batch = 10
+num_events_batch = 300
 sigma_init1 = 0.1
 sigma_init2 = 0.1
 sigma_init3 = 0.1
-factor = 5
+factor = 1
+sigma_likelihood = 8.0*1e-2
 sigma_1 = factor * 3.3663987633184266e-05# sigma1 for motion update
 sigma_2 = factor * 3.366410184326084e-05# sigma2 for motion update
 sigma_3 = factor * 0.0005285784750737629 # sigma3 for motion update
-total_nr_events_considered = 10010  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = 13010  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 
@@ -332,7 +332,7 @@ def get_latest_particles(t_asked, particles_all_time):
     return particles_all_time[particles_all_time['t'] <= t_asked].iloc[-1]
 
 
-def event_likelihood(z, event, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
+def event_likelihood(z, event, mu=0.22, sigma=sigma_likelihood, k_e=1.0*1e-3):
     """
     For a given absolute log intensity difference z,
     returns the likelihood of an event.
@@ -391,7 +391,7 @@ def measurement_update(events_batch,
         particles['Weight'] = particles.apply(lambda x: x.Weight + [event_likelihood(x.z, event)], axis=1)
     particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x)) #Tested
 
-    return particles
+    return
 
 
 def normalize_particle_weights(particles):
@@ -401,7 +401,7 @@ def normalize_particle_weights(particles):
     :return: particles with normalized weight (sum of weights = 1)
     '''
     particles['Weight'] = particles['Weight']/particles['Weight'].sum()
-    return particles
+    return
 
 
 def resampling(particles):
@@ -493,13 +493,12 @@ def run():
         events_batch = events[event_nr:event_nr + num_events_batch]
         dt_batch = (events_batch['t'].max() - events_batch['t'].min())/num_events_batch
         particles = motion_update(particles, tau=dt_batch)
-        particles = measurement_update(events_batch,
-                                       particles,
-                                       all_rotations,
-                                       sensortensor,
-                                       calibration_inv)
-
-        # particles = normalize_particle_weights(particles)
+        measurement_update(events_batch,
+                           particles, all_rotations,
+                           sensortensor,
+                           calibration_inv
+                           )
+        normalize_particle_weights(particles)
         particles = resampling(particles)
 
         event_nr += num_events_batch
@@ -535,6 +534,9 @@ def run():
                           sigma1=sigma_1,
                           sigma2=sigma_2,
                           sigma3=sigma_3,
+                          sigma_init1=sigma_init1,
+                          sigma_init2=sigma_init2,
+                          sigma_init3=sigma_init3,
                           seconds_passed=time_passed)
 
 

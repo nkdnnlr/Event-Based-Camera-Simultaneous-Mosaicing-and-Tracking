@@ -113,7 +113,7 @@ def plot_unitsphere_matplot():
 
 if __name__ == '__main__':
     directory_poses = '../output/poses/'
-    filename_ours = 'quaternions_06052019T093149.txt'
+    filename_ours = 'quaternions_06052019T103239.txt'
     filename_theirs = 'poses.txt'
     poses_ours = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_ours))
     poses_theirs = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_theirs),
