@@ -140,10 +140,7 @@ def q2R_df(df):
     """
     # df['rotmats_ctrl'] = np.zeros((3,3))
     rotmats =pd.DataFrame(columns = ['t','Rotation'])
-    rotmats2 = pd.DataFrame(columns=['t'])
-    # rotmats['t'] = df['t']
-    counter  = 0
-    # rotmats['t'] = df['t']
+
     for idx, row in df.copy().iterrows():
 
         rotmats.loc[idx, 'Rotation'] = (q2R([row['qw'], row['qx'],

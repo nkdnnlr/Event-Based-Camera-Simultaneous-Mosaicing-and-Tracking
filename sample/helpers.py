@@ -26,7 +26,7 @@ def get_first_matrix(filename_poses):
 
 def load_poses(filename_poses, includes_translations=False):
     """
-    gets first matrix from poses file
+    gets poses from poses file
     :param filename_poses: filename of poses
     :return:
     """
