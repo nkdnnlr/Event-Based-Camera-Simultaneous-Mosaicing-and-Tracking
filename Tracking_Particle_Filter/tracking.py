@@ -36,7 +36,7 @@ outputdir_poses = '../output/poses/'
 
 # Constants
 eventlikelihood_comparison_flipped = True
-num_particles = 200
+num_particles = 10
 num_events_batch = 300
 sigma_init1 = 0.05
 sigma_init2 = 0.05
@@ -410,18 +410,21 @@ def resampling(particles):
     :param particles:
     :return: resampled particles, weighted average
     '''
-
-    sum_of_weights=particles['Weight'].cumsum(axis=0)
-
-    resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
+    np.random.seed(1)
+    print(particles['Rotation'],particles['Weight'])
+    # starttime = time.time()
+    resampled_particles1 = pd.DataFrame(columns=['Rotation', 'Weight'])
     # resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
     # resampled_particles['Weight'] = resampled_particles['Weight'].astype(object)
     #
-    # resampled_particles['Rotation'] = particles['Rotation'].sample(n=num_particles, replace=True,
-    #                                                            weights=particles['Weight'], random_state=1)
-    # resampled_particles['Weight'] = float(1 / num_particles)
-    # resampled_particles = resampled_particles.reset_index(drop=True)
+    resampled_particles1['Rotation'] = particles['Rotation'].sample(n=num_particles, replace=True,
+                                                                weights=particles['Weight'], random_state=1)
+    resampled_particles1['Weight'] = float(1 / num_particles)
+    resampled_particles1 = resampled_particles1.reset_index(drop=True)
     # #
+    print(resampled_particles1)
+    sum_of_weights=particles['Weight'].cumsum(axis=0)
+    resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
     for i in range(len(particles)):     # i: resampling for each particle
         r = np.random.uniform(0, 1)
         for n in range(len(particles)):
@@ -435,6 +438,9 @@ def resampling(particles):
         resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
         resampled_particles.at[i, ['Weight']] = float(1/len(particles))
         resampled_particles['Weight'] = resampled_particles['Weight'].astype('float64')
+    # print(time.time()-starttime)
+    print(resampled_particles)
+    exit()
 
     return resampled_particles
 
