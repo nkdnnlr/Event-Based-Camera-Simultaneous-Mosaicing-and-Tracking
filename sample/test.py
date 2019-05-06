@@ -103,3 +103,15 @@ def angle2map(theta, phi, height=1024, width=2048):
     y = np.int(np.floor((-1*phi+np.pi/2)/np.pi*height))
     x = np.int(np.floor((theta + np.pi)/(2*np.pi)*width))
     return y, x
+
+import pandas as pd
+import Tracking_Particle_Filter.tracking as tracking
+
+
+d = {'Rotation': ['a', 'b', 'c' ,'d'], 'Weight': [0, 0,0,100]}
+particles = pd.DataFrame(data=d)
+
+tracking.resampling(particles)
+
+print(particles)
+print(tracking.resampling(particles))
