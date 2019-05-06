@@ -412,31 +412,28 @@ def resampling(particles):
     :return: resampled particles, weighted average
     '''
 
-    sum_of_weights=particles['Weight'].cumsum(axis=0)
-
+    # sum_of_weights=particles['Weight'].cumsum(axis=0)
 
     resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
-    # resampled_particles['Rotation'] = resampled_particles['Rotation'].astype(object)
-    # resampled_particles['Weight'] = resampled_particles['Weight'].astype(object)
-    #
-    # resampled_particles['Rotation'] = particles['Rotation'].sample(n=num_particles, replace=True,
-    #                                                            weights=particles['Weight'], random_state=1)
-    # resampled_particles['Weight'] = float(1 / num_particles)
-    # resampled_particles = resampled_particles.reset_index(drop=True)
-    # #
-    for i in range(len(particles)):     # i: resampling for each particle
-        r = np.random.uniform(0, 1)
-        for n in range(len(particles)):
-            if sum_of_weights[n] >= r and n==0:
-                n_tilde=n
-                continue
-            if sum_of_weights[n] >= r and r > sum_of_weights[n - 1]:
-                n_tilde=n
-                continue
 
-        resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
-        resampled_particles.at[i, ['Weight']] = float(1/len(particles))
-        resampled_particles['Weight'] = resampled_particles['Weight'].astype('float64')
+    resampled_particles['Rotation'] = particles['Rotation'].sample(n=len(particles), replace=True,
+                                                              weights=particles['Weight'], random_state=1)
+    resampled_particles['Weight'] = float(1 / len(particles))
+    resampled_particles = resampled_particles.reset_index(drop=True)
+
+    # for i in range(len(particles)):     # i: resampling for each particle
+    #     r = np.random.uniform(0, 1)
+    #     for n in range(len(particles)):
+    #         if sum_of_weights[n] >= r and n==0:
+    #             n_tilde=n
+    #             break
+    #         if sum_of_weights[n] >= r and r > sum_of_weights[n - 1]:
+    #             n_tilde=n
+    #             break
+    #
+    #     resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
+    #     resampled_particles.at[i, ['Weight']] = float(1/len(particles))
+    #     resampled_particles['Weight'] = resampled_particles['Weight'].astype('float64')
 
     return resampled_particles
 
@@ -447,10 +444,9 @@ def mean_of_resampled_particles(particles):
     '''
     rotmats=np.zeros((len(particles),3,3))
     for i in range(len(particles)):
-        rotmats[i] = sp.logm(particles['Rotation'].as_matrix()[i])
+        rotmats[i] = sp.logm(particles['Rotation'].values()[i])
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
-
 
     return mean
 
