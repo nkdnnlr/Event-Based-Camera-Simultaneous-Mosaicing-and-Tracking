@@ -115,13 +115,15 @@ def plot_unitsphere_matplot():
 
 if __name__ == '__main__':
     directory_poses = '../output/poses/'
-    filename_ours = 'quaternions_06052019T093149.txt'
+    filename_ours = 'quaternions_06052019T123823.txt'
     filename_theirs = 'poses.txt'
     poses_ours = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_ours))
     poses_theirs = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_theirs),
                                       includes_translations=True)
     rotations_ours = coordinate_transforms.q2R_df(poses_ours)
     rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
+    # test = np.dot(rotations_theirs['Rotation'][29],rotations_theirs['Rotation'][29].T)
+    # print(test)
     rotations_theirs_cut = cut_df_wrt_time(rotations_ours, rotations_theirs)
 
     compare_trajectories(rotations_ours,rotations_theirs_cut)

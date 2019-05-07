@@ -6,19 +6,9 @@ import os
 import numpy as np
 import pandas as pd
 import scipy.linalg as sp
-import math
-import sys
-
-from mpl_toolkits.mplot3d import Axes3D
-# import plotly
-# import plotly.plotly as py
-# import plotly.graph_objs as go
-# plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
-from sys import platform as sys_pf
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-# import matplotlib.animation as animation
 import sample.helpers as helpers
 import sample.visualisation as visualisation
 
@@ -37,12 +27,12 @@ outputdir_poses = '../output/poses/'
 # Constants
 
 eventlikelihood_comparison_flipped = True
-num_particles = 1000
-num_events_batch = 10
+num_particles = 300
+num_events_batch = 300
 sigma_init1 = 0.1
 sigma_init2 = 0.1
 sigma_init3 = 0.1
-factor = 5
+factor = 0.5
 sigma_1 = factor * 3.3663987633184266e-05# sigma1 for motion update
 sigma_2 = factor * 3.366410184326084e-05# sigma2 for motion update
 sigma_3 = factor * 0.0005285784750737629 # sigma3 for motion update
@@ -332,7 +322,7 @@ def get_latest_particles(t_asked, particles_all_time):
     return particles_all_time[particles_all_time['t'] <= t_asked].iloc[-1]
 
 
-def event_likelihood(z, event, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-3):
+def event_likelihood(z, event, mu=0.22, sigma=8.0*1e-2, k_e=1.0*1e-6):
     """
     For a given absolute log intensity difference z,
     returns the likelihood of an event.
@@ -444,7 +434,7 @@ def mean_of_resampled_particles(particles):
     '''
     rotmats=np.zeros((len(particles),3,3))
     for i in range(len(particles)):
-        rotmats[i] = sp.logm(particles['Rotation'].values()[i])
+        rotmats[i] = sp.logm(particles['Rotation'].as_matrix()[i])
     liemean = sum(rotmats)/len(particles)
     mean = sp.expm(liemean)
 
