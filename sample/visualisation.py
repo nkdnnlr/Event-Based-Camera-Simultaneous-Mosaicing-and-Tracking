@@ -71,7 +71,11 @@ def visualize_particles(rotation_matrices, mean_value = None):
     :return: plotly and matplotlib plot which shows the distribution
     """
 
-    vec = np.array([1,0,0]).T
+    # vec = np.array([1,0,0]).T
+    vec = np.array([np.sqrt(1/3), np.sqrt(1/3), np.sqrt(1/3)]).T
+    vec = np.array([0, 0, 1]).T
+
+
     vecM = rotation_matrices.apply(lambda x: np.dot(x, vec))
     rotX = vecM.str.get(0)
     rotY = vecM.str.get(1)
@@ -115,12 +119,15 @@ def plot_unitsphere_matplot():
 
 if __name__ == '__main__':
     directory_poses = '../output/poses/'
-    filename_ours = 'quaternions_06052019T103239.txt'
+    filename_ours = 'quaternions_06052019T132925.txt'
     filename_theirs = 'poses.txt'
     poses_ours = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_ours))
     poses_theirs = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_theirs),
                                       includes_translations=True)
     rotations_ours = coordinate_transforms.q2R_df(poses_ours)
+    print(rotations_ours)
+
+
     rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
     rotations_theirs_cut = cut_df_wrt_time(rotations_ours, rotations_theirs)
 

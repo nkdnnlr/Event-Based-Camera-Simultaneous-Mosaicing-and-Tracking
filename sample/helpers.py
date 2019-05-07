@@ -81,10 +81,10 @@ def rotmat2quaternion(rotmat):
     :param rotmat: 3x3 Rotation matrix
     :return: quaternion in form: (qx,qy,qz,qw)
     """
-    qw = np.sqrt(1 + rotmat[0][0] + rotmat[1][1] + rotmat[2][2]) / 2
-    qx = (rotmat[2][1] - rotmat[1][2]) / (4 * qw)
-    qy = (rotmat[0][2] - rotmat[2][0]) / (4 * qw)
-    qz = (rotmat[1][0] - rotmat[0][1]) / (4 * qw)
+    qw = np.sqrt(1. + rotmat[0][0] + rotmat[1][1] + rotmat[2][2]) / 2.
+    qx = (rotmat[2][1] - rotmat[1][2]) / (4. * qw)
+    qy = (rotmat[0][2] - rotmat[2][0]) / (4. * qw)
+    qz = (rotmat[1][0] - rotmat[0][1]) / (4. * qw)
     return qx, qy, qz, qw
 
 def rotmat2eulerangles(R):
