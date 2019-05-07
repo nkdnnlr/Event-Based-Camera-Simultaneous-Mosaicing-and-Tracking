@@ -27,7 +27,8 @@ def compare_trajectories(df_ours, df_theirs):
     """
 
 
-    vec = np.array([1,0,0]).T
+    vec = np.array([1/np.sqrt(3),1/np.sqrt(3),1/np.sqrt(3)]).T
+    # vec = np.array([1,0,0])
     vecM = df_ours['Rotation'].apply(lambda x: np.dot(x, vec))
     rotX = vecM.str.get(0)
     rotY = vecM.str.get(1)
@@ -61,7 +62,6 @@ def cut_df_wrt_time(rotations_ours, rotations_theirs):
 
     return rotations_theirs_cut
 
-
 def visualize_particles(rotation_matrices, mean_value = None):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
@@ -93,7 +93,6 @@ def visualize_particles(rotation_matrices, mean_value = None):
     cbar.set_label("Nr. of pose")
 
     plt.show()
-
 
 def plot_unitsphere_matplot():
     r = 1
