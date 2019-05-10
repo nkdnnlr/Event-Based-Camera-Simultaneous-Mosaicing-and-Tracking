@@ -36,18 +36,20 @@ outputdir_poses = '../output/poses/'
 
 # Constants
 eventlikelihood_comparison_flipped = True
-num_particles = 2
+num_particles = 1
 num_events_batch = 300
-sigma_init1 = 0.1
-sigma_init2 = 0.1
-sigma_init3 = 0.1
-factor = 0
+sigma_init1 = 0
+sigma_init2 = 0
+sigma_init3 = 0
+factor = 1
 sigma_likelihood = 8.0*1e-2
 sigma_1 = factor * 3.3663987633184266e-05# sigma1 for motion update
 sigma_2 = factor * 3.366410184326084e-05# sigma2 for motion update
 sigma_3 = factor * 0.0005285784750737629 # sigma3 for motion update
 total_nr_events_considered = 130100  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
+
+all_rotations_test = []
 
 
 # tau=7000
@@ -308,8 +310,19 @@ def motion_update(particles, tau):
     G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])  # rotation around y
     G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])  # rotation around z
 
-    R_c = sp.expm(np.dot(10004**4*0.0005285784750737629**2, G1))
+    # R_c = sp.expm(np.dot(10004**4*0.0005285784750737629**2, G3))
+    m = 10004**4
+    R_c = sp.expm(np.dot(m*sigma_1**2, G1) +
+                  np.dot(m*sigma_2**2, G2) +
+                  np.dot(m*sigma_3**2, G3))
+
+
+    R_c = sp.expm(
+                  np.dot(m*sigma_2**2, G1))
+
     # print(R_c)
+    # print(particles['Rotation'].loc[0])
+    # exit()
 
     particles['Rotation'] = particles['Rotation'].apply(
         # lambda x: np.dot(x, np.dot(R_c, sp.expm(np.dot(np.random.normal(0.0, sigma_1**2 * tau * num_events_batch), G1) +
@@ -318,7 +331,6 @@ def motion_update(particles, tau):
 
         lambda x: np.dot(x, R_c))
 
-    # print(particles['Rotation'].loc[0])
     return particles
 
 
@@ -448,7 +460,7 @@ def mean_of_resampled_particles(particles):
     :param particles: pandas df of resampled particles (all with the same weight)
     :return: mean of rotation matrix
     '''
-    rotmats=np.zeros((len(particles),3,3))
+    rotmats=np.zeros((len(particles), 3, 3))
     for i in range(len(particles)):
         rotmats[i] = sp.logm(particles['Rotation'].as_matrix()[i])
     liemean = sum(rotmats)/len(particles)
@@ -495,6 +507,7 @@ def run():
     mean_of_rotations = pd.DataFrame(columns=['Rotation'])
     mean_of_rotations['Rotation'].astype(object)
 
+    all_rotations_test.append(first_matrix)
     while batch_nr < num_batches:
         events_batch = events[event_nr:event_nr + num_events_batch]
         dt_batch = (events_batch['t'].max() - events_batch['t'].min())/num_events_batch
@@ -514,6 +527,8 @@ def run():
         t_batch = events.loc[event_nr]['t']
 
         new_rotation = mean_of_resampled_particles(particles)
+        all_rotations_test.append(new_rotation)
+
 
         # visualize_particles(particles['Rotation'],  mean_value=new_rotation)
 
@@ -528,8 +543,9 @@ def run():
 
     print(batch_nr)
     print(event_nr)
-    datestring = helpers.write_quaternions2file(all_rotations,
-                                                directory='../output/poses/')
+    quaternions = helpers.rot2quaternions(all_rotations)
+    datestring = helpers.quaternions2file(quaternions, directory='../output/poses/')
+
     #Include all wished
     time_passed = round(time.time() - starttime)
     helpers.write_logfile(datestring, directory= '../output/poses/',
@@ -551,6 +567,7 @@ def run():
     print("Time passed: {} sec".format(time_passed))
     # visualisation.visualize_particles(mean_of_rotations['Rotation'], mean_value = None)
     print("Done")
+    return all_rotations
 
 
 if __name__ == '__main__':

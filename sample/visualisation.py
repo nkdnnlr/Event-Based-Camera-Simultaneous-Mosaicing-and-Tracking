@@ -27,7 +27,9 @@ def compare_trajectories(df_ours, df_theirs):
     """
 
 
-    vec = np.array([1,0,0]).T
+    # vec = np.array([1,0,0]).T
+    vec = np.array([np.sqrt(1 / 3), np.sqrt(1 / 3), np.sqrt(1 / 3)]).T
+
     vecM = df_ours['Rotation'].apply(lambda x: np.dot(x, vec))
     rotX = vecM.str.get(0)
     rotY = vecM.str.get(1)
@@ -61,6 +63,35 @@ def cut_df_wrt_time(rotations_ours, rotations_theirs):
 
     return rotations_theirs_cut
 
+def visualize_rotmats(rotation_matrices):
+    vec = np.array([np.sqrt(1 / 3), np.sqrt(1 / 3), np.sqrt(1 / 3)]).T
+    # vec = np.array([0, 0, 1]).T
+
+    rotX = []
+    rotY = []
+    rotZ = []
+    for rotmat in rotation_matrices:
+        vecM = np.dot(vec, rotmat)
+        rotX.append(vecM[0])
+        rotY.append(vecM[1])
+        rotZ.append(vecM[2])
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlim3d(-1, 1)
+    ax.set_ylim3d(-1, 1)
+    ax.set_zlim3d(-1, 1)
+    p = ax.scatter(rotX, rotY, rotZ, c='b')
+    p = ax.scatter(rotX[0], rotY[0], rotZ[0], c='r', s=200)
+
+    # cbar = fig.colorbar(p, ax=ax)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    # cbar.set_label("Nr. of pose")
+    # return ax
+    plt.show()
+
 
 def visualize_particles(rotation_matrices, mean_value = None):
     """
@@ -72,10 +103,11 @@ def visualize_particles(rotation_matrices, mean_value = None):
     """
 
     # vec = np.array([1,0,0]).T
-    vec = np.array([np.sqrt(1/3), np.sqrt(1/3), np.sqrt(1/3)]).T
-    vec = np.array([0, 0, 1]).T
+    vec = np.array([np.sqrt(1 / 3), np.sqrt(1 / 3), np.sqrt(1 / 3)]).T
+    # vec = np.array([0, 0, 1]).T
 
-
+    print(rotation_matrices)
+    exit()
     vecM = rotation_matrices.apply(lambda x: np.dot(x, vec))
     rotX = vecM.str.get(0)
     rotY = vecM.str.get(1)
@@ -119,7 +151,7 @@ def plot_unitsphere_matplot():
 
 if __name__ == '__main__':
     directory_poses = '../output/poses/'
-    filename_ours = 'quaternions_06052019T132925.txt'
+    filename_ours = 'quaternions_07052019T150842.txt'
     filename_theirs = 'poses.txt'
     poses_ours = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_ours))
     poses_theirs = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_theirs),
@@ -131,4 +163,4 @@ if __name__ == '__main__':
     rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
     rotations_theirs_cut = cut_df_wrt_time(rotations_ours, rotations_theirs)
 
-    compare_trajectories(rotations_ours,rotations_theirs_cut)
+    compare_trajectories(rotations_ours,rotations_theirs)
