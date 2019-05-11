@@ -120,9 +120,32 @@ def get_sigmas(eulerangles, all_events=3564657, batch_size=300, factor=1):
     :param eulerangles:
     :return:
     """
-    dx = eulerangles['th_x'].max() - eulerangles['th_x'].min()
-    dy = eulerangles['th_y'].max() - eulerangles['th_y'].min()
-    dz = eulerangles['th_z'].max() - eulerangles['th_z'].min()
+    print(eulerangles.diff().head(10))
+    print(eulerangles.diff().abs().head(10))
+    print(eulerangles.diff().tail(10))
+    print()
+    diffabs = eulerangles.diff().abs()
+
+
+    print(eulerangles.diff().sum())
+    dx = eulerangles.diff().abs().sum()['th_x']
+    dy = eulerangles.diff().abs().sum()['th_y']
+    dz = eulerangles.diff().abs().sum()['th_z'] - 2*np.pi
+
+    dx = eulerangles.diff().sum()['th_x']
+    dy = eulerangles.diff().sum()['th_y']
+    dz = eulerangles.diff().sum()['th_z'] - 2*np.pi
+
+    # print(eulerangles.diff().describe())
+    # print(eulerangles.diff().abs().describe())
+    #
+    # dx = eulerangles['th_x'].max() - eulerangles['th_x'].min()
+    # dy = eulerangles['th_y'].max() - eulerangles['th_y'].min()
+    # dz = eulerangles['th_z'].max() - eulerangles['th_z'].min()
+
+    # print(dx)
+    # print(dy)
+    # print(dz)
 
     num_batches = all_events/batch_size
     sigma_1 = factor * dx / num_batches
@@ -132,17 +155,12 @@ def get_sigmas(eulerangles, all_events=3564657, batch_size=300, factor=1):
     return sigma_1, sigma_2, sigma_3
 
 
-def write_quaternions2file(allrotations, directory):
+def rot2quaternions(allrotations):
     """
     Converts rotations to quaternions and saves in quaternions_[datestring].csv
     :param allrotations: all rotations
     :return: datestring
     """
-    # Gets datestring
-    now = datetime.datetime.now()
-    datestring = now.strftime("%d%m%YT%H%M%S")
-    filename = 'quaternions_' + datestring + '.txt'
-    filename = os.path.join(directory, filename)
 
     # Makes DataFrame with quaternions
     quaternions = pd.DataFrame(columns = ['t','qx','qy','qz','qw'])
@@ -152,10 +170,24 @@ def write_quaternions2file(allrotations, directory):
     quaternions['qy'] = quaternion.str.get(1)
     quaternions['qz'] = quaternion.str.get(2)
     quaternions['qw'] = quaternion.str.get(3)
+    return quaternions
 
+def quaternions2file(quaternions, directory):
+    """
+
+    :param quaternions:
+    :param directory:
+    :return:
+    """
     # Saves quaternions as csv
+    # Gets datestring
+    now = datetime.datetime.now()
+    datestring = now.strftime("%d%m%YT%H%M%S")
+    filename = 'quaternions_' + datestring + '.txt'
+    filename = os.path.join(directory, filename)
     quaternions.to_csv(filename, index=None, header=None, sep=' ', mode='a')
     return datestring
+
 
 def write_logfile(datestring, directory, **kwargs):
     """
@@ -193,9 +225,11 @@ if __name__ == '__main__':
 
 
     eulerangles = rotmat2eulerangles_df(rotmats)
+
     # print(eulerangles.head(10))
     print(eulerangles.describe())
     sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles, factor=1)
+    print("sigmas")
     print(sigma_1)
     print(sigma_2)
     print(sigma_3)

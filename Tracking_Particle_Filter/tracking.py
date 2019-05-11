@@ -43,10 +43,10 @@ sigma_init2 = 0
 sigma_init3 = 0
 factor = 1
 sigma_likelihood = 8.0*1e-2
-sigma_1 = factor * 3.3663987633184266e-05# sigma1 for motion update
-sigma_2 = factor * 3.366410184326084e-05# sigma2 for motion update
-sigma_3 = factor * 0.0005285784750737629 # sigma3 for motion update
-total_nr_events_considered = 130100  #TODO: Only works if not dividable by events by batch
+sigma_1 = factor * -1.2004463158740107e-06# sigma1 for motion update
+sigma_2 = factor * -1.2004463158740107e-06# sigma2 for motion update
+sigma_3 = factor * -0.0005287901912270614 # sigma3 for motion update
+total_nr_events_considered = 3564657  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 all_rotations_test = []
@@ -311,14 +311,14 @@ def motion_update(particles, tau):
     G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])  # rotation around z
 
     # R_c = sp.expm(np.dot(10004**4*0.0005285784750737629**2, G3))
-    m = 10004**4
-    R_c = sp.expm(np.dot(m*sigma_1**2, G1) +
-                  np.dot(m*sigma_2**2, G2) +
-                  np.dot(m*sigma_3**2, G3))
+    # m = 10004**4
+    m = 1
+    R_c = sp.expm(np.dot(m*sigma_1, G3) +
+                  np.dot(m*sigma_2, G1) +
+                  np.dot(m*sigma_3, G2))
 
 
-    R_c = sp.expm(
-                  np.dot(m*sigma_2**2, G1))
+    # R_c = sp.expm(np.dot(m*sigma_2**2, G1))
 
     # print(R_c)
     # print(particles['Rotation'].loc[0])
@@ -330,6 +330,11 @@ def motion_update(particles, tau):
         #                             np.dot(np.random.normal(0.0, sigma_3**2 * tau * num_events_batch), G3)))))
 
         lambda x: np.dot(x, R_c))
+
+    particles['Rotation'] = particles['Rotation'].apply(lambda x: np.dot(x, sp.expm(np.random.normal(sigma_1, sigma_1) * G3 +
+                                                                                    np.random.normal(sigma_2, sigma_2) * G1 +
+                                                                                    np.random.normal(sigma_3, sigma_3) * G2)))
+
 
     return particles
 

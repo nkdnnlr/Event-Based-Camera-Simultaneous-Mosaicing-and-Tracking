@@ -34,6 +34,7 @@ def compare_trajectories(df_ours, df_theirs):
     rotX = vecM.str.get(0)
     rotY = vecM.str.get(1)
     rotZ = vecM.str.get(2)
+    print()
 
     vecM_theirs = df_theirs['Rotation'].apply(lambda x: np.dot(x, vec))
     rotX_theirs= vecM_theirs.str.get(0)
