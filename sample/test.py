@@ -108,10 +108,37 @@ import pandas as pd
 import Tracking_Particle_Filter.tracking as tracking
 
 
-d = {'Rotation': ['a', 'b', 'c' ,'d'], 'Weight': [0, 0,0,100]}
-particles = pd.DataFrame(data=d)
+# d = {'Rotation': ['a', 'b', 'c' ,'d'], 'Weight': [0, 0,0,100]}
+# particles = pd.DataFrame(data=d)
+#
+# tracking.resampling(particles)
+#
+# print(particles)
+# print(tracking.resampling(particles))
+#
 
-tracking.resampling(particles)
+def rot2d(theta):
+    matrix = np.array([[np.cos(theta), -np.sin(theta)],
+                     [np.sin(theta), np.cos(theta)]])
+    return matrix
 
-print(particles)
-print(tracking.resampling(particles))
+def abstandnorm(x, y):
+    return np.sqrt((x[0]-y[0])**2 + (x[1]-y[1])**2)
+
+A = rot2d(np.pi/2)
+B = rot2d(np.pi/4)
+
+
+v = np.array([1, 0])
+w = np.array([1/np.sqrt(2), 1/np.sqrt(2)])
+
+
+# print(abstandnorm(v, w))
+print(abstandnorm(np.dot(A, v), np.dot(B, v)))
+print(abstandnorm(np.dot(A, v), np.dot(B, w)))
+
+# for x in range(1000000):
+#     y = x**2
+#     print(x)
+
+# print(A.T.dot(A))
