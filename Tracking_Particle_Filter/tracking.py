@@ -36,7 +36,7 @@ outputdir_poses = '../output/poses/'
 
 # Constants
 eventlikelihood_comparison_flipped = True
-num_particles = 1
+num_particles = 200
 num_events_batch = 300
 sigma_init1 = 0
 sigma_init2 = 0
@@ -45,8 +45,10 @@ factor = 1
 sigma_likelihood = 8.0*1e-2
 sigma_1 = factor * -1.2004463158740107e-06# sigma1 for motion update
 sigma_2 = factor * -1.2004463158740107e-06# sigma2 for motion update
+sigma_1 = factor * 0.00005# sigma1 for motion update
+sigma_2 = factor * 0.00005# sigma2 for motion update
 sigma_3 = factor * -0.0005287901912270614 # sigma3 for motion update
-total_nr_events_considered = 3564657  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = int(3564657/360*20)  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 all_rotations_test = []
@@ -312,10 +314,10 @@ def motion_update(particles, tau):
 
     # R_c = sp.expm(np.dot(10004**4*0.0005285784750737629**2, G3))
     # m = 10004**4
-    m = 1
-    R_c = sp.expm(np.dot(m*sigma_1, G3) +
-                  np.dot(m*sigma_2, G1) +
-                  np.dot(m*sigma_3, G2))
+    # m = 1
+    # R_c = sp.expm(np.dot(m*sigma_1, G3) +
+    #               np.dot(m*sigma_2, G1) +
+    #               np.dot(m*sigma_3, G2))
 
 
     # R_c = sp.expm(np.dot(m*sigma_2**2, G1))
@@ -324,17 +326,17 @@ def motion_update(particles, tau):
     # print(particles['Rotation'].loc[0])
     # exit()
 
-    particles['Rotation'] = particles['Rotation'].apply(
-        # lambda x: np.dot(x, np.dot(R_c, sp.expm(np.dot(np.random.normal(0.0, sigma_1**2 * tau * num_events_batch), G1) +
-        #                             np.dot(np.random.normal(0.0, sigma_2**2 * tau * num_events_batch), G2) +
-        #                             np.dot(np.random.normal(0.0, sigma_3**2 * tau * num_events_batch), G3)))))
+    # particles['Rotation'] = particles['Rotation'].apply(
+    #     # lambda x: np.dot(x, np.dot(R_c, sp.expm(np.dot(np.random.normal(0.0, sigma_1**2 * tau * num_events_batch), G1) +
+    #     #                             np.dot(np.random.normal(0.0, sigma_2**2 * tau * num_events_batch), G2) +
+    #     #                             np.dot(np.random.normal(0.0, sigma_3**2 * tau * num_events_batch), G3)))))
+    #
+    #     lambda x: np.dot(x, R_c))
 
-        lambda x: np.dot(x, R_c))
-
-    particles['Rotation'] = particles['Rotation'].apply(lambda x: np.dot(x, sp.expm(np.random.normal(sigma_1, sigma_1) * G3 +
-                                                                                    np.random.normal(sigma_2, sigma_2) * G1 +
-                                                                                    np.random.normal(sigma_3, sigma_3) * G2)))
-
+    particles['Rotation'] = particles['Rotation'].apply(lambda x: np.dot(x, sp.expm(np.random.normal(0.0, abs(sigma_1)) * G3 +
+                                                                                    np.random.normal(0.0, abs(sigma_2)) * G1 +
+                                                                                    np.random.normal(sigma_3, abs(sigma_3)) * G2)))
+    np.random.normal()
 
     return particles
 
@@ -513,19 +515,20 @@ def run():
     mean_of_rotations['Rotation'].astype(object)
 
     all_rotations_test.append(first_matrix)
+    starttime = time.time()
     while batch_nr < num_batches:
         events_batch = events[event_nr:event_nr + num_events_batch]
         dt_batch = (events_batch['t'].max() - events_batch['t'].min())/num_events_batch
         particles = motion_update(particles, tau=dt_batch)
         #TODO: include again
 
-        # measurement_update(events_batch,
-        #                    particles, all_rotations,
-        #                    sensortensor,
-        #                    calibration_inv
-        #                    )
-        # normalize_particle_weights(particles)
-        # particles = resampling(particles)
+        measurement_update(events_batch,
+                           particles, all_rotations,
+                           sensortensor,
+                           calibration_inv
+                           )
+        normalize_particle_weights(particles)
+        particles = resampling(particles)
 
         event_nr += num_events_batch
         batch_nr += 1
@@ -540,8 +543,8 @@ def run():
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': new_rotation}
         # print("time: ", t_batch, "Rotations: ", helpers.rotmat2quaternion(new_rotation))
-
-        print("batch: {} time: {}".format(batch_nr, t_batch))
+        dtime = time.time()-starttime
+        print("batch: {}/{}\t time: {}s/{}s".format(batch_nr, num_batches, int(dtime), int(dtime/batch_nr*num_batches)))
 
         mean_of_rotations.loc[batch_nr] = [new_rotation]
 
@@ -554,8 +557,7 @@ def run():
     #Include all wished
     time_passed = round(time.time() - starttime)
     helpers.write_logfile(datestring, directory= '../output/poses/',
-                          experiment='Test without motion update but constant v',
-                          remark='Comparison in Event likelihood fkt set to != ',
+                          experiment='Finding optimal parameters',
                           eventlikelihood_comparison_flipped=eventlikelihood_comparison_flipped,
                           num_particles=num_particles,
                           num_events=total_nr_events_considered,
