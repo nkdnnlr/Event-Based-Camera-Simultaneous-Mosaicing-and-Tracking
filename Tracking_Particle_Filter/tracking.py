@@ -40,10 +40,10 @@ sigma_init2 = 0
 sigma_init3 = 0
 factor = 1
 sigma_likelihood = 8.0*1e-2
-sigma_1 = factor * 0.0005# sigma1 for motion update
-sigma_2 = factor * 0.0005# sigma2 for motion update
+sigma_1 = factor * 0.0004# sigma1 for motion update
+sigma_2 = factor * 0.0004# sigma2 for motion update
 sigma_3 = factor * -0.0005287901912270614 # sigma3 for motion update
-total_nr_events_considered = int(3564657/360*50)  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = int(3564657/360*40)  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 all_rotations_test = []
