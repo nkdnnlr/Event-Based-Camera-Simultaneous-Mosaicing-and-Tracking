@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import scipy.linalg as sp
 import sample.coordinate_transforms as coordinate_transforms
 import datetime
 
@@ -206,16 +207,43 @@ def write_logfile(datestring, directory, **kwargs):
             print(key, ":", value)
             the_file.write("{0}: {1}\n".format(key, value))
 
+def generate_random_rotmat(unit=False, seed=None):
+    """
+    Initializes random rotation matrix
+    :param unit: returns unit matrix if True
+    :param seed: Fixing the random seed to test function. None per default.
+    :return: 3x3 np.array
+    """
+    if unit:
+        M = np.eye(3)
 
+    else:
+        if seed is not None:
+            np.random.seed(seed)
+
+        G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
+        G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
+        G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+
+        n1 = np.random.uniform(-np.pi, np.pi)
+        n2 = np.random.uniform(-np.pi, np.pi)
+        n3 = np.random.uniform(-np.pi, np.pi)
+
+        M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
+
+    return M
 
 if __name__ == '__main__':
     data_dir = '../data/synth1'
     filename_poses = os.path.join(data_dir, 'poses.txt')
     filename_events = os.path.join(data_dir, 'events.txt')
 
+    all_events = load_events(filename_events, head=3624650, return_number=True)
+    # print(type(all_events))
+    print(all_events)
+    exit()
     # first_matrix = get_first_matrix(filename_poses)
     # print(first_matrix)
-    # all_events = load_events(filename_events, head=None, return_number=True)
     # print(all_events)
 
     # write_logfile('abcdefg',  a=23, b='hello', aa='oops')
