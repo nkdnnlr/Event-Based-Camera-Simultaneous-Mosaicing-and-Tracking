@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import scipy.linalg as sp
 import sample.coordinate_transforms as coordinate_transforms
 import datetime
 
@@ -81,10 +82,10 @@ def rotmat2quaternion(rotmat):
     :param rotmat: 3x3 Rotation matrix
     :return: quaternion in form: (qx,qy,qz,qw)
     """
-    qw = np.sqrt(1 + rotmat[0][0] + rotmat[1][1] + rotmat[2][2]) / 2
-    qx = (rotmat[2][1] - rotmat[1][2]) / (4 * qw)
-    qy = (rotmat[0][2] - rotmat[2][0]) / (4 * qw)
-    qz = (rotmat[1][0] - rotmat[0][1]) / (4 * qw)
+    qw = np.sqrt(1. + rotmat[0][0] + rotmat[1][1] + rotmat[2][2]) / 2.
+    qx = (rotmat[2][1] - rotmat[1][2]) / (4. * qw)
+    qy = (rotmat[0][2] - rotmat[2][0]) / (4. * qw)
+    qz = (rotmat[1][0] - rotmat[0][1]) / (4. * qw)
     return qx, qy, qz, qw
 
 def rotmat2eulerangles(R):
@@ -120,9 +121,32 @@ def get_sigmas(eulerangles, all_events=3564657, batch_size=300, factor=1):
     :param eulerangles:
     :return:
     """
-    dx = eulerangles['th_x'].max() - eulerangles['th_x'].min()
-    dy = eulerangles['th_y'].max() - eulerangles['th_y'].min()
-    dz = eulerangles['th_z'].max() - eulerangles['th_z'].min()
+    print(eulerangles.diff().head(10))
+    print(eulerangles.diff().abs().head(10))
+    print(eulerangles.diff().tail(10))
+    print()
+    diffabs = eulerangles.diff().abs()
+
+
+    print(eulerangles.diff().sum())
+    dx = eulerangles.diff().abs().sum()['th_x']
+    dy = eulerangles.diff().abs().sum()['th_y']
+    dz = eulerangles.diff().abs().sum()['th_z'] - 2*np.pi
+
+    dx = eulerangles.diff().sum()['th_x']
+    dy = eulerangles.diff().sum()['th_y']
+    dz = eulerangles.diff().sum()['th_z'] - 2*np.pi
+
+    # print(eulerangles.diff().describe())
+    # print(eulerangles.diff().abs().describe())
+    #
+    # dx = eulerangles['th_x'].max() - eulerangles['th_x'].min()
+    # dy = eulerangles['th_y'].max() - eulerangles['th_y'].min()
+    # dz = eulerangles['th_z'].max() - eulerangles['th_z'].min()
+
+    # print(dx)
+    # print(dy)
+    # print(dz)
 
     num_batches = all_events/batch_size
     sigma_1 = factor * dx / num_batches
@@ -132,17 +156,12 @@ def get_sigmas(eulerangles, all_events=3564657, batch_size=300, factor=1):
     return sigma_1, sigma_2, sigma_3
 
 
-def write_quaternions2file(allrotations, directory):
+def rot2quaternions(allrotations):
     """
     Converts rotations to quaternions and saves in quaternions_[datestring].csv
     :param allrotations: all rotations
     :return: datestring
     """
-    # Gets datestring
-    now = datetime.datetime.now()
-    datestring = now.strftime("%d%m%YT%H%M%S")
-    filename = 'quaternions_' + datestring + '.txt'
-    filename = os.path.join(directory, filename)
 
     # Makes DataFrame with quaternions
     quaternions = pd.DataFrame(columns = ['t','qx','qy','qz','qw'])
@@ -152,10 +171,24 @@ def write_quaternions2file(allrotations, directory):
     quaternions['qy'] = quaternion.str.get(1)
     quaternions['qz'] = quaternion.str.get(2)
     quaternions['qw'] = quaternion.str.get(3)
+    return quaternions
 
+def quaternions2file(quaternions, directory):
+    """
+
+    :param quaternions:
+    :param directory:
+    :return:
+    """
     # Saves quaternions as csv
+    # Gets datestring
+    now = datetime.datetime.now()
+    datestring = now.strftime("%d%m%YT%H%M%S")
+    filename = 'quaternions_' + datestring + '.txt'
+    filename = os.path.join(directory, filename)
     quaternions.to_csv(filename, index=None, header=None, sep=' ', mode='a')
     return datestring
+
 
 def write_logfile(datestring, directory, **kwargs):
     """
@@ -174,16 +207,43 @@ def write_logfile(datestring, directory, **kwargs):
             print(key, ":", value)
             the_file.write("{0}: {1}\n".format(key, value))
 
+def generate_random_rotmat(unit=False, seed=None):
+    """
+    Initializes random rotation matrix
+    :param unit: returns unit matrix if True
+    :param seed: Fixing the random seed to test function. None per default.
+    :return: 3x3 np.array
+    """
+    if unit:
+        M = np.eye(3)
 
+    else:
+        if seed is not None:
+            np.random.seed(seed)
+
+        G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
+        G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
+        G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+
+        n1 = np.random.uniform(-np.pi, np.pi)
+        n2 = np.random.uniform(-np.pi, np.pi)
+        n3 = np.random.uniform(-np.pi, np.pi)
+
+        M = sp.expm(np.dot(n1, G1) + np.dot(n2, G2) + np.dot(n3, G3))
+
+    return M
 
 if __name__ == '__main__':
     data_dir = '../data/synth1'
     filename_poses = os.path.join(data_dir, 'poses.txt')
     filename_events = os.path.join(data_dir, 'events.txt')
 
+    all_events = load_events(filename_events, head=3624650, return_number=True)
+    # print(type(all_events))
+    print(all_events)
+    exit()
     # first_matrix = get_first_matrix(filename_poses)
     # print(first_matrix)
-    # all_events = load_events(filename_events, head=None, return_number=True)
     # print(all_events)
 
     # write_logfile('abcdefg',  a=23, b='hello', aa='oops')
@@ -193,9 +253,11 @@ if __name__ == '__main__':
 
 
     eulerangles = rotmat2eulerangles_df(rotmats)
+
     # print(eulerangles.head(10))
     print(eulerangles.describe())
     sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles, factor=1)
+    print("sigmas")
     print(sigma_1)
     print(sigma_2)
     print(sigma_3)

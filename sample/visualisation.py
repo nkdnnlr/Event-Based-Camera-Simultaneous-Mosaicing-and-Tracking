@@ -17,7 +17,9 @@ import matplotlib.pyplot as plt
 import sample.coordinate_transforms as coordinate_transforms
 import sample.helpers as helpers
 
-def compare_trajectories(df_ours, df_theirs):
+
+
+def compare_trajectories(df_groundtruth, **kwargs):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
 
@@ -25,16 +27,10 @@ def compare_trajectories(df_ours, df_theirs):
     multiplies rot matrix with Z-unit-vector.
     :return: plotly and matplotlib plot which shows the distribution
     """
+    # vec = np.array([1,0,0]).T
+    vec = np.array([np.sqrt(1 / 3), np.sqrt(1 / 3), np.sqrt(1 / 3)]).T
 
-
-    vec = np.array([1/np.sqrt(3),1/np.sqrt(3),1/np.sqrt(3)]).T
-    # vec = np.array([1,0,0])
-    vecM = df_ours['Rotation'].apply(lambda x: np.dot(x, vec))
-    rotX = vecM.str.get(0)
-    rotY = vecM.str.get(1)
-    rotZ = vecM.str.get(2)
-
-    vecM_theirs = df_theirs['Rotation'].apply(lambda x: np.dot(x, vec))
+    vecM_theirs = df_groundtruth['Rotation'].apply(lambda x: np.dot(x, vec))
     rotX_theirs= vecM_theirs.str.get(0)
     rotY_theirs = vecM_theirs.str.get(1)
     rotZ_theirs = vecM_theirs.str.get(2)
@@ -44,16 +40,35 @@ def compare_trajectories(df_ours, df_theirs):
     ax.set_xlim3d(-1, 1)
     ax.set_ylim3d(-1, 1)
     ax.set_zlim3d(-1, 1)
-    q =ax.scatter(rotX_theirs, rotY_theirs, rotZ_theirs, s = 1, color = 'r')
+
+    q = ax.scatter(rotX_theirs, rotY_theirs, rotZ_theirs, s=1, color='r', label="Ground truth")
     ax.scatter(rotX_theirs[0], rotY_theirs[0], rotZ_theirs[0], s=10, color = 'm', marker = 'D')
-    p =ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)), s=2 )
-    cbar = fig.colorbar(p, ax=ax)
+
+    import matplotlib.cm as cm
+
+    colormaps = ['bone', 'spring', 'summer', 'autumn']
+    i=0
+    for key, df in kwargs.items():
+        print(key)
+        print(colormaps[i])
+        # the_file.write("{0}: {1}\n".format(key, value))
+
+        vecM = df['Rotation'].apply(lambda x: np.dot(x, vec))
+        rotX = vecM.str.get(0)
+        rotY = vecM.str.get(1)
+        rotZ = vecM.str.get(2)
+
+        p = ax.scatter(rotX, rotY, rotZ, c=range(len(rotZ)), s=2, label=key, cmap=colormaps[i])
+
+        # cbar = fig.colorbar(p, ax=ax)
+        i+=1
+
+    plt.legend()
     # cbar2 = fig.colorbar(q, ax=ax)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    cbar.set_label("Nr. of pose")
-
+    # cbar.set_label("Nr. of pose")
     plt.show()
 
 def cut_df_wrt_time(rotations_ours, rotations_theirs):
@@ -61,6 +76,36 @@ def cut_df_wrt_time(rotations_ours, rotations_theirs):
     rotations_theirs_cut = rotations_theirs[rotations_theirs['t'] < t_max]
 
     return rotations_theirs_cut
+
+def visualize_rotmats(rotation_matrices):
+    vec = np.array([np.sqrt(1 / 3), np.sqrt(1 / 3), np.sqrt(1 / 3)]).T
+    # vec = np.array([0, 0, 1]).T
+
+    rotX = []
+    rotY = []
+    rotZ = []
+    for rotmat in rotation_matrices:
+        vecM = np.dot(vec, rotmat)
+        rotX.append(vecM[0])
+        rotY.append(vecM[1])
+        rotZ.append(vecM[2])
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlim3d(-1, 1)
+    ax.set_ylim3d(-1, 1)
+    ax.set_zlim3d(-1, 1)
+    p = ax.scatter(rotX, rotY, rotZ, c='b')
+    p = ax.scatter(rotX[0], rotY[0], rotZ[0], c='r', s=200)
+
+    # cbar = fig.colorbar(p, ax=ax)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    # cbar.set_label("Nr. of pose")
+    # return ax
+    plt.show()
+
 
 def visualize_particles(rotation_matrices, mean_value = None):
     """
@@ -71,7 +116,12 @@ def visualize_particles(rotation_matrices, mean_value = None):
     :return: plotly and matplotlib plot which shows the distribution
     """
 
-    vec = np.array([1,0,0]).T
+    # vec = np.array([1,0,0]).T
+    vec = np.array([np.sqrt(1 / 3), np.sqrt(1 / 3), np.sqrt(1 / 3)]).T
+    # vec = np.array([0, 0, 1]).T
+
+    print(rotation_matrices)
+    exit()
     vecM = rotation_matrices.apply(lambda x: np.dot(x, vec))
     rotX = vecM.str.get(0)
     rotY = vecM.str.get(1)
@@ -93,6 +143,7 @@ def visualize_particles(rotation_matrices, mean_value = None):
     cbar.set_label("Nr. of pose")
 
     plt.show()
+
 
 def plot_unitsphere_matplot():
     r = 1
@@ -125,4 +176,9 @@ if __name__ == '__main__':
     # print(test)
     rotations_theirs_cut = cut_df_wrt_time(rotations_ours, rotations_theirs)
 
-    compare_trajectories(rotations_ours,rotations_theirs_cut)
+
+    compare_trajectories(rotations_groundtruth,
+                         onlymotionupdate=rotations_onlymotionupdate,
+                         # likelihoodFlippedFalse=rotations_likelihoodFalse,
+                         # likelihoodFlippedTrue=rotations_likelihoodTrue,
+                         likelihoodFlippedTruessmall=rotations_likelihoodTruessmall)

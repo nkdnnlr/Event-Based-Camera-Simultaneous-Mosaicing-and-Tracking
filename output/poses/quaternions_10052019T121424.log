@@ -1,0 +1,14 @@
+Datestring: 10052019T121424
+experiment: Test without motion update but constant v
+remark: Comparison in Event likelihood fkt set to != 
+eventlikelihood_comparison_flipped: True
+num_particles: 1
+num_events: 130100
+num_events_per_batch: 300
+sigma1: 3.3663987633184266e-05
+sigma2: 3.366410184326084e-05
+sigma3: 0.0005285784750737629
+sigma_init1: 0
+sigma_init2: 0
+sigma_init3: 0
+seconds_passed: 3
