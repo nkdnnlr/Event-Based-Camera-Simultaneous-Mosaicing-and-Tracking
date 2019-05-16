@@ -33,17 +33,18 @@ outputdir_poses = '../output/poses/'
 
 # Constants
 eventlikelihood_comparison_flipped = False
-num_particles = 1000
-num_events_batch = 300
+num_particles = 100
+num_events_batch = 2
 sigma_init1 = 0
 sigma_init2 = 0
 sigma_init3 = 0
-factor = 1
+factor = 1 / 300 * num_events_batch
 sigma_likelihood = 8.0*1e-2
+sigma_likelihood = 0.17
 sigma_1 = factor * 0.0004# sigma1 for motion update
 sigma_2 = factor * 0.0004# sigma2 for motion update
 sigma_3 = factor * -0.0005287901912270614 # sigma3 for motion update
-total_nr_events_considered = int(3564657/360*40)  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = int(3564657/360*10)  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 all_rotations_test = []
@@ -51,8 +52,8 @@ all_rotations_test = []
 
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
-# mu = 0.22
-mu = 0.45
+# contrast_threshold = 0.22
+contrast_threshold = 0.45
 # sigma_3 = 8.0*10**(-2)
 minimum_constant = 1e-3
 sensor_height = 128
@@ -272,6 +273,9 @@ class Tracker():
         :param velocity: timestep
         :return: DataFrame with updated particles
         """
+        if math.isnan(velocity):
+            velocity = 1.
+
         G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])  # rotation around x
         G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])  # rotation around y
         G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])  # rotation around z
@@ -514,6 +518,8 @@ class Tracker():
                               sigma_init1=sigma_init1,
                               sigma_init2=sigma_init2,
                               sigma_init3=sigma_init3,
+                              sigma_likelihood=sigma_likelihood,
+                              contrast_threshold=contrast_threshold,
                               seconds_passed=time_passed)
 
 

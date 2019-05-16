@@ -176,7 +176,7 @@ if __name__ == '__main__':
     filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
     filename_likelihoodFalse = 'quaternions_13052019T113443_20deg_False.txt'
     filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
-    filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'
+    filename_likelihoodTruessmall = 'quaternions_16052019T082453.txt'
 
     poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_onlymotionupdate))
     poses_likelihoodFalse = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodFalse))
@@ -191,6 +191,6 @@ if __name__ == '__main__':
 
     compare_trajectories(rotations_groundtruth,
                          onlymotionupdate=rotations_onlymotionupdate,
-                         likelihoodFlippedFalse=rotations_likelihoodFalse,
-                         likelihoodFlippedTrue=rotations_likelihoodTrue,
+                         # likelihoodFlippedFalse=rotations_likelihoodFalse,
+                         # likelihoodFlippedTrue=rotations_likelihoodTrue,
                          likelihoodFlippedTruessmall=rotations_likelihoodTruessmall)
