@@ -16,6 +16,37 @@ matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import sample.coordinate_transforms as coordinate_transforms
 import sample.helpers as helpers
+import Tracking_Particle_Filter.tracking as track
+
+
+def compare_trajectories_2d(intensity_map, poses, event0):
+    '''
+
+    :param intensity_map:
+    :param poses:
+    :param event0:
+    :return: plot with intensity map and ground truth trajectory
+    '''
+    poses_converted = pd.DataFrame(columns=
+                          ['Rotation', 'Weight', 'theta',
+                           'phi', 'v', 'u', 'pol',
+                           'p_w1', 'p_w2', 'p_w3',
+                           'z', 'logintensity_ttc',
+                           'logintensity_t'])
+    poses_converted['Rotation'] = poses['Rotation']
+    poses_converted['Rotation'].astype('object')
+    tracker = track.Tracker()
+    calibration = tracker.camera_intrinsics()
+    calibration_inv = np.linalg.inv(calibration)
+    print(poses_converted['phi'])
+    for idx, event in event0.iterrows():
+        angles = tracker.event_and_particles_to_angles(event, poses_converted, calibration_inv)
+        continue
+
+    plt.figure()
+    plt.imshow(intensity_map)
+    plt.show()
+
 
 
 
@@ -164,21 +195,40 @@ def plot_unitsphere_matplot():
 
 
 if __name__ == '__main__':
+
     directory_poses = '../output/poses/'
-    filename_ours = 'quaternions_06052019T123823.txt'
-    filename_theirs = 'poses.txt'
-    poses_ours = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_ours))
-    poses_theirs = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_theirs),
-                                      includes_translations=True)
-    rotations_ours = coordinate_transforms.q2R_df(poses_ours)
-    rotations_theirs = coordinate_transforms.q2R_df(poses_theirs)
-    # test = np.dot(rotations_theirs['Rotation'][29],rotations_theirs['Rotation'][29].T)
-    # print(test)
-    rotations_theirs_cut = cut_df_wrt_time(rotations_ours, rotations_theirs)
+    data_dir = '../data/synth1'
+    intensity_map = np.load('../output/intensity_map.npy')
+    event_file = os.path.join(data_dir, 'events.txt')
+    event0 = helpers.load_events(filename=event_file, head=1)
+
+    # ground truth
+    filename_groundtruth = 'poses.txt'
+    poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth),
+                                           includes_translations=True)
+    rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth)
+    compare_trajectories_2d(intensity_map, rotations_groundtruth, event0)
+
+    # rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
+'''
+    filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
+    filename_likelihoodFalse = 'quaternions_13052019T113443_20deg_False.txt'
+    filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
+    filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'
+
+    poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_onlymotionupdate))
+    poses_likelihoodFalse = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodFalse))
+    poses_likelihoodTrue = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodTrue))
+    poses_likelihoodTruessmall = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodTruessmall))
+
+    rotations_onlymotionupdate = coordinate_transforms.q2R_df(poses_onlymotionupdate)
+    rotations_likelihoodFalse = coordinate_transforms.q2R_df(poses_likelihoodFalse)
+    rotations_likelihoodTrue = coordinate_transforms.q2R_df(poses_likelihoodTrue)
+    rotations_likelihoodTruessmall = coordinate_transforms.q2R_df(poses_likelihoodTruessmall)
 
 
     compare_trajectories(rotations_groundtruth,
                          onlymotionupdate=rotations_onlymotionupdate,
-                         # likelihoodFlippedFalse=rotations_likelihoodFalse,
-                         # likelihoodFlippedTrue=rotations_likelihoodTrue,
+                         likelihoodFlippedFalse=rotations_likelihoodFalse,
+                         likelihoodFlippedTrue=rotations_likelihoodTrue,
                          likelihoodFlippedTruessmall=rotations_likelihoodTruessmall)

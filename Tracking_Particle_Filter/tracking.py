@@ -20,7 +20,6 @@ matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 # import matplotlib.animation as animation
 import sample.helpers as helpers
-import sample.visualisation as visualisation
 
 
 
@@ -166,6 +165,7 @@ class Tracker():
         :param calibration_inv: inverted camera calibration
         :return: DataFrame with particles as rows and angles as columns.
         """
+
         k_inv_times_event = np.dot(calibration_inv,
                                    np.array([[event['x']], [event['y']], [1]])
                                    )  # from camera frame (u,v) to world reference frame
@@ -178,10 +178,11 @@ class Tracker():
         particles['p_w3'] = particles['p_w3'].str.get(0)
 
         # from world reference frame to rotational frame (theta, phi)
+
         particles['theta'] = np.arctan2(particles['p_w1'], particles['p_w3'])
         particles['phi'] = np.arctan2(particles['p_w2'], np.sqrt(particles['p_w1'] ** 2 + particles['p_w3'] ** 2))
 
-        return
+        return particles
 
     def event_and_oneparticle_to_angles(self, event, particle, calibration_inv):
         """
