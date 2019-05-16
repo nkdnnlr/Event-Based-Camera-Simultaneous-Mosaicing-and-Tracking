@@ -19,6 +19,38 @@ import sample.helpers as helpers
 
 
 
+
+def compare_trajectories_2d(intensity_map, poses, event0):
+    '''
+
+    :param intensity_map:
+    :param poses:
+    :param event0:
+    :return: plot with intensity map and ground truth trajectory
+    '''
+    poses_converted = pd.DataFrame(columns=
+                          ['Rotation', 'Weight', 'theta',
+                           'phi', 'v', 'u', 'pol',
+                           'p_w1', 'p_w2', 'p_w3',
+                           'z', 'logintensity_ttc',
+                           'logintensity_t'])
+    poses_converted['Rotation'] = poses['Rotation']
+    poses_converted['Rotation'].astype('object')
+    tracker = track.Tracker()
+    calibration = tracker.camera_intrinsics()
+    calibration_inv = np.linalg.inv(calibration)
+    print(poses_converted['phi'])
+    for idx, event in event0.iterrows():
+        angles = tracker.event_and_particles_to_angles(event, poses_converted, calibration_inv)
+        continue
+
+    plt.figure()
+    plt.imshow(intensity_map)
+    plt.show()
+
+
+
+
 def compare_trajectories(df_groundtruth, **kwargs):
     """
     :return: function checks whether the rotation matrices are really randomly distributed. muoltiplies rot matrix with Z-unit-vector. returns plotly and matplotlib plot which shows the distribution
