@@ -51,7 +51,7 @@ def compare_trajectories_2d(intensity_map, poses, event0):
 
 
 
-def compare_trajectories_2d(intensity_map, poses, event0):
+def compare_trajectories_2d(intensity_map, poses, event0, poses_ours):
     '''
 
     :param intensity_map:
@@ -66,6 +66,13 @@ def compare_trajectories_2d(intensity_map, poses, event0):
                            'z', 'logintensity_ttc',
                            'logintensity_t'])
     poses_converted['Rotation'] = poses['Rotation']
+    poses_converted_ours = pd.DataFrame(columns=
+                                   ['Rotation', 'Weight', 'theta',
+                                    'phi', 'v', 'u', 'pol',
+                                    'p_w1', 'p_w2', 'p_w3',
+                                    'z', 'logintensity_ttc',
+                                    'logintensity_t'])
+    poses_converted_ours['Rotation'] = poses_ours['Rotation']
     poses_converted['Rotation'].astype('object')
     tracker = track.Tracker()
     calibration = tracker.camera_intrinsics()
@@ -75,8 +82,15 @@ def compare_trajectories_2d(intensity_map, poses, event0):
         angles = tracker.event_and_particles_to_angles(event, poses_converted, calibration_inv)
         continue
 
+    for idx, event in event0.iterrows():
+        angles_ours = tracker.event_and_particles_to_angles(event, poses_converted_ours, calibration_inv)
+        continue
+
+
     plt.figure()
-    plt.imshow(intensity_map)
+    plt.plot(angles['theta'], angles['phi'], 'b.')
+    plt.plot(angles_ours['theta'], angles_ours['phi'], 'r.')
+    # plt.imshow(intensity_map)
     plt.show()
 
 
@@ -239,7 +253,12 @@ if __name__ == '__main__':
     poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth),
                                            includes_translations=True)
     rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth)
-    compare_trajectories_2d(intensity_map, rotations_groundtruth, event0)
+
+    poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, 'quaternions_16052019T082453_.txt'))
+    rotations_ours = coordinate_transforms.q2R_df(poses_onlymotionupdate)
+
+    compare_trajectories_2d(intensity_map, rotations_groundtruth, event0, rotations_ours)
+
 
     # rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
 '''
@@ -264,3 +283,4 @@ if __name__ == '__main__':
                          likelihoodFlippedFalse=rotations_likelihoodFalse,
                          likelihoodFlippedTrue=rotations_likelihoodTrue,
                          likelihoodFlippedTruessmall=rotations_likelihoodTruessmall)
+'''
