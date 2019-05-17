@@ -273,7 +273,9 @@ class Tracker():
         :param velocity: timestep
         :return: DataFrame with updated particles
         """
-        if math.isnan(velocity):
+        print(velocity)
+        if np.isinf(velocity):
+            print("is inf!")
             velocity = 1.
 
         G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])  # rotation around x
