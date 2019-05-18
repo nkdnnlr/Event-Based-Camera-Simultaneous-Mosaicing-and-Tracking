@@ -16,6 +16,103 @@ matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import sample.coordinate_transforms as coordinate_transforms
 import sample.helpers as helpers
+import Tracking_Particle_Filter.tracking as track
+import matplotlib.cm as cm
+
+
+def compare_trajectories_2d(intensity_map, poses, event0):
+    '''
+
+    :param intensity_map:
+    :param poses:
+    :param event0:
+    :return: plot with intensity map and ground truth trajectory
+    '''
+    poses_converted = pd.DataFrame(columns=
+                          ['Rotation', 'Weight', 'theta',
+                           'phi', 'v', 'u', 'pol',
+                           'p_w1', 'p_w2', 'p_w3',
+                           'z', 'logintensity_ttc',
+                           'logintensity_t'])
+    poses_converted['Rotation'] = poses['Rotation']
+    poses_converted['Rotation'].astype('object')
+    tracker = track.Tracker()
+    calibration = tracker.camera_intrinsics()
+    calibration_inv = np.linalg.inv(calibration)
+
+    print(poses_converted['phi'])
+    for idx, event in event0.iterrows():
+        angles = tracker.event_and_particles_to_angles(event, poses_converted, calibration_inv)
+        continue
+
+    plt.figure()
+    plt.imshow(intensity_map)
+    plt.show()
+
+
+
+
+
+def compare_trajectories_2d(intensity_map, poses, fourevents, poses_ours):
+    '''
+
+    :param intensity_map:
+    :param poses:
+    :param event0:
+    :return: plot with intensity map and ground truth trajectory
+    '''
+    poses_converted = pd.DataFrame(columns=
+                          ['Rotation', 'Weight', 'theta',
+                           'phi', 'v', 'u', 'pol',
+                           'p_w1', 'p_w2', 'p_w3',
+                           'z', 'logintensity_ttc',
+                           'logintensity_t'])
+    poses_converted['Rotation'] = poses['Rotation']
+    poses_converted_ours = pd.DataFrame(columns=
+                                   ['Rotation', 'Weight', 'theta',
+                                    'phi', 'v', 'u', 'pol',
+                                    'p_w1', 'p_w2', 'p_w3',
+                                    'z', 'logintensity_ttc',
+                                    'logintensity_t'])
+    poses_converted_ours['Rotation'] = poses_ours['Rotation']
+    poses_converted['Rotation'].astype('object')
+    tracker = track.Tracker()
+    calibration = tracker.camera_intrinsics()
+    calibration_inv = np.linalg.inv(calibration)
+    print(calibration)
+    print(calibration_inv)
+    # print(calibration_inv)
+    # exit()
+
+
+    # print(fourevents)
+    # exit()
+
+    angles = []
+    for i in range(5):
+        angle = tracker.event_and_particles_to_angles(fourevents.loc[i], poses_converted, calibration_inv, firstrotation_gt)
+        angles.append(angle.copy())
+
+
+
+    plt.figure()
+    plt.plot(angles[0]['theta'], angles[0]['phi'], 'b.', label='0')
+    plt.plot(angles[1]['theta'], angles[1]['phi'], 'r.', label='1')
+    plt.plot(angles[2]['theta'], angles[2]['phi'], 'g.', label='2')
+    plt.plot(angles[3]['theta'], angles[3]['phi'], 'y.', label='3')
+    plt.plot(angles[4]['theta'], angles[4]['phi'], 'k.', label='c')
+
+
+    # plt.plot(angles_ours['theta'], angles_ours['phi'], 'r.')
+    plt.xlabel('theta')
+    plt.ylabel('phi')
+    plt.legend()
+    plt.xlim([-np.pi, np.pi])
+    plt.ylim([-np.pi/2, np.pi/2])
+
+    # plt.imshow(intensity_map)
+    plt.show()
+
 
 
 
@@ -164,18 +261,45 @@ def plot_unitsphere_matplot():
 
 
 if __name__ == '__main__':
-    directory_poses = '../output/poses/'
 
-    #ground truth
+    directory_poses = '../output/poses/'
+    data_dir = '../data/synth1'
+    intensity_map = np.load('../output/intensity_map.npy')
+    event_file = os.path.join(data_dir, 'events.txt')
+    events = helpers.load_events(filename=event_file, head=4)
+    print(events)
+
+    events_gen = helpers.generate_events()
+    print(events_gen)
+
+    # exit()
+    # for idx, event in events.iterrows():
+    #     event0 = event
+    # event00 = helpers.generate_event(x=128/2, y=128/2, pol=1)
+
+
+
+    # ground truth
     filename_groundtruth = 'poses.txt'
     poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth),
                                            includes_translations=True)
-    rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth)
-    # rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
+    rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth.head(2000))
+    firstrotation_gt = rotations_groundtruth.loc[0, 'Rotation']
+    print(firstrotation_gt)
 
+
+    poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, 'quaternions_16052019T082453_.txt'))
+    rotations_ours = coordinate_transforms.q2R_df(poses_onlymotionupdate)
+
+    compare_trajectories_2d(intensity_map, rotations_groundtruth, events_gen, rotations_ours)
+
+
+    # rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
+'''
     filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
     filename_likelihoodFalse = 'quaternions_13052019T113443_20deg_False.txt'
     filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
+    filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'
     filename_likelihoodTruessmall = 'quaternions_16052019T082453_.txt'
 
     poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_onlymotionupdate))
@@ -191,6 +315,7 @@ if __name__ == '__main__':
 
     compare_trajectories(rotations_groundtruth,
                          onlymotionupdate=rotations_onlymotionupdate,
-                         # likelihoodFlippedFalse=rotations_likelihoodFalse,
-                         # likelihoodFlippedTrue=rotations_likelihoodTrue,
+                         likelihoodFlippedFalse=rotations_likelihoodFalse,
+                         likelihoodFlippedTrue=rotations_likelihoodTrue,
                          likelihoodFlippedTruessmall=rotations_likelihoodTruessmall)
+'''
