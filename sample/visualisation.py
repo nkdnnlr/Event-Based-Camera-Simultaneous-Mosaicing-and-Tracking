@@ -17,84 +17,81 @@ import matplotlib.pyplot as plt
 import sample.coordinate_transforms as coordinate_transforms
 import sample.helpers as helpers
 import Tracking_Particle_Filter.tracking as track
+import numpy as np
 
-
-def compare_trajectories_2d(intensity_map, poses, event0):
+def compare_trajectories_2d(intensity_map, poses, poses_ours):
     '''
 
-    :param intensity_map:
-    :param poses:
-    :param event0:
+    :param intensity_map: 1024x2048 image
+    :param poses: Pandas Dataframe of Ground truth poses
+    :param poses_ours: Pandas Dataframe of our poses
     :return: plot with intensity map and ground truth trajectory
     '''
-    poses_converted = pd.DataFrame(columns=
-                          ['Rotation', 'Weight', 'theta',
-                           'phi', 'v', 'u', 'pol',
-                           'p_w1', 'p_w2', 'p_w3',
-                           'z', 'logintensity_ttc',
-                           'logintensity_t'])
-    poses_converted['Rotation'] = poses['Rotation']
-    poses_converted['Rotation'].astype('object')
     tracker = track.Tracker()
     calibration = tracker.camera_intrinsics()
     calibration_inv = np.linalg.inv(calibration)
-    print(poses_converted['phi'])
-    for idx, event in event0.iterrows():
-        angles = tracker.event_and_particles_to_angles(event, poses_converted, calibration_inv)
-        continue
+
+    #initialize event0 as center of sensor
+    event0 = pd.DataFrame(np.array([[64, 64, 0, 0]]), columns = ['x','y', 't', 'pol'])
+
+    poses_converted = pd.DataFrame(columns=
+                                   ['Rotation', 'Weight', 'theta',
+                                    'phi', 'v', 'u', 'pol',
+                                    'p_w1', 'p_w2', 'p_w3',
+                                    'z', 'logintensity_ttc',
+                                    'logintensity_t'])
+
+    poses_converted['Rotation']=poses['Rotation']
+    # poses_converted['Rotation'].astype('object')
+
+    angles = np.empty([len(poses_converted.index),2])
+
+    for i in range(len(poses_converted.index)):
+        angles[i] = tracker.event_and_oneparticle_to_angles(event0, poses_converted.iloc[i], calibration_inv)
+
+    print(angles[0])
 
     plt.figure()
-    plt.imshow(intensity_map)
+    plt.plot(angles[:,0], angles[:,1], 'b.')
     plt.show()
 
 
-
-
-
-def compare_trajectories_2d(intensity_map, poses, event0, poses_ours):
     '''
+    poses_converted.apply(
+        lambda x: tracker.event_and_particles_to_angles(event0, x, calibration_inv)
+    )
 
-    :param intensity_map:
-    :param poses:
-    :param event0:
-    :return: plot with intensity map and ground truth trajectory
-    '''
-    poses_converted = pd.DataFrame(columns=
-                          ['Rotation', 'Weight', 'theta',
-                           'phi', 'v', 'u', 'pol',
-                           'p_w1', 'p_w2', 'p_w3',
-                           'z', 'logintensity_ttc',
-                           'logintensity_t'])
-    poses_converted['Rotation'] = poses['Rotation']
+    
+    print(poses.iloc[1])
+    
+    #initialize pandas dataframe for our converted poses
     poses_converted_ours = pd.DataFrame(columns=
                                    ['Rotation', 'Weight', 'theta',
                                     'phi', 'v', 'u', 'pol',
                                     'p_w1', 'p_w2', 'p_w3',
                                     'z', 'logintensity_ttc',
                                     'logintensity_t'])
+
     poses_converted_ours['Rotation'] = poses_ours['Rotation']
+
+    poses_converted_ours['Rotation'].astype('object')
     poses_converted['Rotation'].astype('object')
-    tracker = track.Tracker()
-    calibration = tracker.camera_intrinsics()
-    calibration_inv = np.linalg.inv(calibration)
-    print(poses_converted['phi'])
-    for idx, event in event0.iterrows():
+    
+    for idx, poses in poses.iterrows():
         angles = tracker.event_and_particles_to_angles(event, poses_converted, calibration_inv)
         continue
-
-    for idx, event in event0.iterrows():
+    
+    for idx, event in event.iterrows():
         angles_ours = tracker.event_and_particles_to_angles(event, poses_converted_ours, calibration_inv)
         continue
-
-
+    
+    
     plt.figure()
     plt.plot(angles['theta'], angles['phi'], 'b.')
-    plt.plot(angles_ours['theta'], angles_ours['phi'], 'r.')
+    # plt.plot(angles_ours['theta'], angles_ours['phi'], 'r.')
     # plt.imshow(intensity_map)
     plt.show()
-
-
-
+    '''
 
 def compare_trajectories(df_groundtruth, **kwargs):
     """
@@ -241,7 +238,6 @@ def plot_unitsphere_matplot():
 
 
 if __name__ == '__main__':
-
     directory_poses = '../output/poses/'
     data_dir = '../data/synth1'
     intensity_map = np.load('../output/intensity_map.npy')
@@ -250,15 +246,13 @@ if __name__ == '__main__':
 
     # ground truth
     filename_groundtruth = 'poses.txt'
+
     poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth),
                                            includes_translations=True)
     rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth)
-
     poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, 'quaternions_16052019T082453_.txt'))
     rotations_ours = coordinate_transforms.q2R_df(poses_onlymotionupdate)
-
-    compare_trajectories_2d(intensity_map, rotations_groundtruth, event0, rotations_ours)
-
+    compare_trajectories_2d(intensity_map, rotations_groundtruth, rotations_ours)
 
     # rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
 '''
