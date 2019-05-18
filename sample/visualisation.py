@@ -49,8 +49,6 @@ def compare_trajectories_2d(intensity_map, poses, poses_ours):
     for i in range(len(poses_converted.index)):
         angles[i] = tracker.event_and_oneparticle_to_angles(event0, poses_converted.iloc[i], calibration_inv)
 
-    print(angles[0])
-
     plt.figure()
     plt.plot(angles[:,0], angles[:,1], 'b.')
     plt.show()
