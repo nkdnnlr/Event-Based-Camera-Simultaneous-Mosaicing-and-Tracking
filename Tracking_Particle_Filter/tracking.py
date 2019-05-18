@@ -248,7 +248,7 @@ class Tracker():
         """
         particles['v'] = particles['phi'].apply(lambda angle: np.floor((np.pi/2 - angle) / np.pi * height))
         particles['u'] = particles['theta'].apply(lambda angle: np.floor((angle + np.pi) / (2 * np.pi) * width))
-        return
+        return particles
 
 
     def particles_per_event2map(self, event, particles, calibration_inv):
