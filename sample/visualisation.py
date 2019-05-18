@@ -280,10 +280,10 @@ if __name__ == '__main__':
 
 
     # ground truth
-    filename_groundtruth = 'poses.txt'
+    filename_groundtruth = 'quaternions_18052019T170416.txt'
     poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth),
                                            includes_translations=True)
-    rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth.head(2000))
+    rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth.head(300))
     firstrotation_gt = rotations_groundtruth.loc[0, 'Rotation']
     print(firstrotation_gt)
 
