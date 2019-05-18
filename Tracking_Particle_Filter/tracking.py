@@ -31,19 +31,23 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
+degrees_rot = 10
 eventlikelihood_comparison_flipped = False
-num_particles = 100
-num_events_batch = 2
+num_particles = 300
+num_events_batch = 300
 sigma_init1 = 0
 sigma_init2 = 0
 sigma_init3 = 0
 factor = 1 / 300 * num_events_batch
-sigma_likelihood = 8.0*1e-2
+# sigma_likelihood = 8.0*1e-2
+contrast_threshold = 0.45
 sigma_likelihood = 0.17
+minimum_constant = 1e-3
+
 sigma_1 = factor * 0.0004# sigma1 for motion update
 sigma_2 = factor * 0.0004# sigma2 for motion update
 sigma_3 = factor * -0.0005287901912270614 # sigma3 for motion update
-total_nr_events_considered = int(3564657/360*10)  #TODO: Only works if not dividable by events by batch
+total_nr_events_considered = int(3564657/360*degrees_rot)  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
 
 all_rotations_test = []
@@ -52,9 +56,7 @@ all_rotations_test = []
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 # contrast_threshold = 0.22
-contrast_threshold = 0.45
-# sigma_3 = 8.0*10**(-2)
-minimum_constant = 1e-3
+
 sensor_height = 128
 sensor_width = 128
 image_height = 1024
@@ -81,9 +83,11 @@ class Tracker():
         # K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
 
         #from Guillermo:
+        # TODO: Looks better if x_0 and x_y is increased. Why?
         K = np.array([[91.4014729896821, 0.0, 64.0],
                       [0.0, 91.4014729896821, 64.0],
                       [0, 0, 1]])
+
         return K
 
 
@@ -165,22 +169,33 @@ class Tracker():
         :param calibration_inv: inverted camera calibration
         :return: DataFrame with particles as rows and angles as columns.
         """
+        # print("Event")
+        # print('x: ', event['x'])
+        # print('y: ', event['y'])
 
         k_inv_times_event = np.dot(calibration_inv,
                                    np.array([[event['x']], [event['y']], [1]])
                                    )  # from camera frame (u,v) to world reference frame
+        # print(k_inv_times_event)
+        # print(k_inv_times_event)
 
         coordinates = ['p_w1', 'p_w2', 'p_w3']
-        particles[coordinates] = pd.DataFrame.from_records(particles['Rotation'].apply(lambda x: np.dot(x, k_inv_times_event)))
 
-        particles['p_w1'] = particles['p_w1'].str.get(0)  # This is tested and correct. str.get(0) just removes brackets
+        particles[coordinates] = pd.DataFrame.from_records(particles['Rotation'].apply(lambda x: np.dot(np.dot(first_matrix.T, x), k_inv_times_event)))
+
+        particles['p_w1'] = particles['p_w1'].str.get(0)  # str.get(0) just removes brackets
         particles['p_w2'] = particles['p_w2'].str.get(0)
         particles['p_w3'] = particles['p_w3'].str.get(0)
+
+        # print(particles['p_w1'].loc[0])
+        # print(particles['p_w2'].loc[0])
+        # print(particles['p_w3'].loc[0])
 
         # from world reference frame to rotational frame (theta, phi)
 
         particles['theta'] = np.arctan2(particles['p_w1'], particles['p_w3'])
-        particles['phi'] = np.arctan2(particles['p_w2'], np.sqrt(particles['p_w1'] ** 2 + particles['p_w3'] ** 2))
+        # print(particles['theta'][0])
+        particles['phi'] = np.arctan2(particles['p_w2'], np.sqrt(np.power(particles['p_w1'], 2) + np.power(particles['p_w3'], 2)))
 
         return particles
 
@@ -194,7 +209,7 @@ class Tracker():
         :return: DataFrame with particles as rows and angles as columns.
         """
         k_inv_times_event = np.dot(calibration_inv, np.array([[event['x']], [event['y']], [1]])) #from camera frame (u,v) to world reference frame
-        r_w1, r_w2, r_w3 = np.dot(particle['Rotation'], k_inv_times_event)
+        r_w1, r_w2, r_w3 = np.dot(np.dot(first_matrix.T, particle['Rotation']), k_inv_times_event)
         r_w1 = r_w1[0]
         r_w2 = r_w2[0]
         r_w3 = r_w3[0]
@@ -274,7 +289,9 @@ class Tracker():
         :param velocity: timestep
         :return: DataFrame with updated particles
         """
-        if math.isnan(velocity):
+        # print(velocity)
+        if np.isinf(velocity):
+            print("is inf!")
             velocity = 1.
 
         G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])  # rotation around x

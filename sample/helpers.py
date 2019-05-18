@@ -76,6 +76,29 @@ def load_events(filename, head=None, return_number=False):
             return events.head(head)
 
 
+def generate_event(t=0, x=128/2, y=128/2, pol=1, corner=None):
+    if corner is None:
+        event = pd.Series({'t': t, 'x': x, 'y': y, 'pol': pol})
+    elif corner == 0:
+        event = pd.Series({'t': t, 'x': 0, 'y': 0, 'pol': pol})
+    elif corner == 1:
+        event = pd.Series({'t': t, 'x': 127, 'y': 0, 'pol': pol})
+    elif corner == 2:
+        event = pd.Series({'t': t, 'x': 127, 'y': 127, 'pol': pol})
+    elif corner == 3:
+        event = pd.Series({'t': t, 'x': 0, 'y': 127, 'pol': pol})
+    elif corner == 4:
+        event = pd.Series({'t': t, 'x': 64, 'y': 64, 'pol': pol})
+    return event
+
+
+def generate_events():
+    cols = ['t', 'x', 'y', 'pol']
+    list_of_series = [generate_event(corner=i) for i in range(5)]
+    events = pd.DataFrame(list_of_series, columns=cols)
+    return events
+
+
 def rotmat2quaternion(rotmat):
     """
     Converts rotation matrix to quaternions in form (qx,qy,qz,qw)
