@@ -31,13 +31,13 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
-degrees_rot = 10
-eventlikelihood_comparison_flipped = True
-num_particles = 300
+degrees_rot = 3
+eventlikelihood_comparison_flipped = False
+num_particles = 1000
 num_events_batch = 300
-sigma_init1 = 0
-sigma_init2 = 0
-sigma_init3 = 0
+sigma_init1 = 0.0001
+sigma_init2 = 0.0001
+sigma_init3 = 0.0001
 factor = 1 / 300 * num_events_batch
 # sigma_likelihood = 8.0*1e-2
 contrast_threshold = 0.45

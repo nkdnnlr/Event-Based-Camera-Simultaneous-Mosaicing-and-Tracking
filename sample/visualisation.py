@@ -20,14 +20,6 @@ import Tracking_Particle_Filter.tracking as track
 import matplotlib.cm as cm
 
 
-
-def plot_events(events):
-
-    plt.figure()
-    plt.plot(events['x'], events['y'], 'r.')
-    plt.show()
-
-
 def compare_trajectories_2d(intensity_map, poses, event0):
     '''
 
@@ -61,11 +53,11 @@ def compare_trajectories_2d(intensity_map, poses, event0):
 
 
 
-def compare_trajectories_2d(intensity_map, poses, fourevents, poses_ours):
+def compare_trajectories_2d(fourevents, poses_gt, poses_ours, intensity_map):
     '''
 
     :param intensity_map:
-    :param poses:
+    :param poses_gt:
     :param event0:
     :return: plot with intensity map and ground truth trajectory
     '''
@@ -75,7 +67,7 @@ def compare_trajectories_2d(intensity_map, poses, fourevents, poses_ours):
                            'p_w1', 'p_w2', 'p_w3',
                            'z', 'logintensity_ttc',
                            'logintensity_t'])
-    poses_converted['Rotation'] = poses['Rotation']
+    poses_converted['Rotation'] = poses_gt['Rotation']
     poses_converted_ours = pd.DataFrame(columns=
                                    ['Rotation', 'Weight', 'theta',
                                     'phi', 'v', 'u', 'pol',
@@ -87,14 +79,9 @@ def compare_trajectories_2d(intensity_map, poses, fourevents, poses_ours):
     tracker = track.Tracker()
     calibration = tracker.camera_intrinsics()
     calibration_inv = np.linalg.inv(calibration)
-    print(calibration)
-    print(calibration_inv)
+    # print(calibration)
     # print(calibration_inv)
-    # exit()
 
-
-    # print(fourevents)
-    # exit()
 
     angles = []
     mappoints = []
@@ -106,11 +93,11 @@ def compare_trajectories_2d(intensity_map, poses, fourevents, poses_ours):
 
 
     plt.figure(1)
-    plt.plot(angles[0]['theta'], angles[0]['phi'], 'b.', label='0', markersize=0.5)
-    plt.plot(angles[1]['theta'], angles[1]['phi'], 'r.', label='1',markersize=0.5)
-    plt.plot(angles[2]['theta'], angles[2]['phi'], 'g.', label='2',markersize=0.5)
-    plt.plot(angles[3]['theta'], angles[3]['phi'], 'y.', label='3',markersize=0.5)
-    plt.plot(angles[4]['theta'], angles[4]['phi'], 'k.', label='c',markersize=0.5)
+    plt.plot(angles[0]['theta'], angles[0]['phi'], 'b.', label='0')
+    plt.plot(angles[1]['theta'], angles[1]['phi'], 'r.', label='1')
+    plt.plot(angles[2]['theta'], angles[2]['phi'], 'g.', label='2')
+    plt.plot(angles[3]['theta'], angles[3]['phi'], 'y.', label='3')
+    plt.plot(angles[4]['theta'], angles[4]['phi'], 'k.', label='c')
 
 
     # plt.plot(angles_ours['theta'], angles_ours['phi'], 'r.')
@@ -125,7 +112,7 @@ def compare_trajectories_2d(intensity_map, poses, fourevents, poses_ours):
     # plt.show()
     plt.figure(2)
     # plt.figure(3)
-    intensity_map = np.load('../output/intensity_map.npy')
+    # intensity_map = np.load('../output/intensity_map.npy')
     plt.imshow(intensity_map)
 
     plt.plot(mappoints[0]['u'], mappoints[0]['v'], 'b.', label='0')
@@ -301,57 +288,53 @@ if __name__ == '__main__':
     data_dir = '../data/synth1'
     intensity_map = np.load('../output/intensity_map.npy')
     event_file = os.path.join(data_dir, 'events.txt')
-    events = helpers.load_events(filename=event_file)
-    events = events[500000:600000]
+    events = helpers.load_events(filename=event_file, head=4)
+    print(events)
 
     events_gen = helpers.generate_events()
-    plot_events(events)
-
-    # exit()
-    # for idx, event in events.iterrows():
-    #     event0 = event
-    # event00 = helpers.generate_event(x=128/2, y=128/2, pol=1)
+    print(events_gen)
 
 
 
-    # ground truth
-    filename_groundtruth = 'quaternions_18052019T170416.txt'
-    poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth),
-                                           includes_translations=False)
-    rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth.head(2000))
-    firstrotation_gt = rotations_groundtruth.loc[0, 'Rotation']
-    print(firstrotation_gt)
 
 
-    poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, 'quaternions_16052019T082453_.txt'))
-    rotations_ours = coordinate_transforms.q2R_df(poses_onlymotionupdate)
+    # poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, 'quaternions_16052019T082453_.txt'))
+    # rotations_ours = coordinate_transforms.q2R_df(poses_onlymotionupdate)
 
-    compare_trajectories_2d(intensity_map, rotations_groundtruth, events_gen, rotations_ours)
 
 
 
     # rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
-'''
-    filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
-    filename_likelihoodFalse = 'quaternions_13052019T113443_20deg_False.txt'
-    filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
-    filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'
-    filename_likelihoodTruessmall = 'quaternions_16052019T082453_.txt'
+    filename_groundtruth = 'poses.txt'
+    filename_onlymotionupdate = 'quaternions_19052019T175810.txt'
+    filename_likelihoodFalse = 'quaternions_19052019T175810.txt'
 
+    # filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
+    # filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'
+    # filename_likelihoodTruessmall = 'quaternions_16052019T082453_.txt'
+
+    poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth), includes_translations=True)
     poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_onlymotionupdate))
     poses_likelihoodFalse = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodFalse))
-    poses_likelihoodTrue = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodTrue))
-    poses_likelihoodTruessmall = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodTruessmall))
+    # poses_likelihoodTrue = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodTrue))
+    # poses_likelihoodTruessmall = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodTruessmall))
 
+    # print(poses_groundtruth.head())
+    # print(poses_onlymotionupdate.head())
+
+
+    rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth)
     rotations_onlymotionupdate = coordinate_transforms.q2R_df(poses_onlymotionupdate)
     rotations_likelihoodFalse = coordinate_transforms.q2R_df(poses_likelihoodFalse)
-    rotations_likelihoodTrue = coordinate_transforms.q2R_df(poses_likelihoodTrue)
-    rotations_likelihoodTruessmall = coordinate_transforms.q2R_df(poses_likelihoodTruessmall)
+    # rotations_likelihoodTrue = coordinate_transforms.q2R_df(poses_likelihoodTrue)
+    # rotations_likelihoodTruessmall = coordinate_transforms.q2R_df(poses_likelihoodTruessmall)
 
+    compare_trajectories_2d(events_gen, rotations_likelihoodFalse, rotations_groundtruth, intensity_map)
 
+    # exit()
     compare_trajectories(rotations_groundtruth,
                          onlymotionupdate=rotations_onlymotionupdate,
-                         likelihoodFlippedFalse=rotations_likelihoodFalse,
-                         likelihoodFlippedTrue=rotations_likelihoodTrue,
-                         likelihoodFlippedTruessmall=rotations_likelihoodTruessmall)
-'''
+                         likelihoodFlippedFalse=rotations_likelihoodFalse)#,
+                         # likelihoodFlippedTrue=rotations_likelihoodTrue,
+                         # likelihoodFlippedTruessmall=rotations_likelihoodTruessmall)
+# '''
