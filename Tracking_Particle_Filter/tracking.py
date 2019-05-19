@@ -31,13 +31,13 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
-degrees_rot = 0.5
-eventlikelihood_comparison_flipped = True
-num_particles = 300
+degrees_rot = 70
+eventlikelihood_comparison_flipped = False
+num_particles = 1000
 num_events_batch = 300
-sigma_init1 = 0.001
-sigma_init2 = 0.001
-sigma_init3 = 0.001 
+sigma_init1 = 0
+sigma_init2 = 0
+sigma_init3 = 0
 factor = 1 / 300 * num_events_batch
 # sigma_likelihood = 8.0*1e-2
 contrast_threshold = 0.45
@@ -231,7 +231,7 @@ class Tracker():
         :return: tuple with integer map points (pixel coordinates)
         """
         # v = np.floor((-1*phi+np.pi/2)/np.pi*height)
-        v = np.floor((np.pi / 2 - phi) / np.pi * height) # jb's version
+        v = np.floor(-1*(np.pi / 2 - phi) / np.pi * height + height) # jb's version
         u = np.floor((theta + np.pi)/(2*np.pi)*width)
         return v, u
 
@@ -246,7 +246,7 @@ class Tracker():
         :param width: width of image in pixels
         :return: particles
         """
-        particles['v'] = particles['phi'].apply(lambda angle: np.floor((np.pi/2 - angle) / np.pi * height))
+        particles['v'] = particles['phi'].apply(lambda angle: np.floor(-1*(np.pi/2 - angle) / np.pi * height + height))
         particles['u'] = particles['theta'].apply(lambda angle: np.floor((angle + np.pi) / (2 * np.pi) * width))
         return particles
 
@@ -440,6 +440,8 @@ class Tracker():
         mean = sp.expm(liemean)
 
         return mean
+
+
 
     def run(self):
         """
