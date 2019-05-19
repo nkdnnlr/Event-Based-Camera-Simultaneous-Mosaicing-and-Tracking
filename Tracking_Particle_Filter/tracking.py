@@ -231,7 +231,7 @@ class Tracker():
         :return: tuple with integer map points (pixel coordinates)
         """
         # v = np.floor((-1*phi+np.pi/2)/np.pi*height)
-        v = np.floor((np.pi / 2 - phi) / np.pi * height) # jb's version
+        v = np.floor(-1*(np.pi / 2 - phi) / np.pi * height + height) # jb's version
         u = np.floor((theta + np.pi)/(2*np.pi)*width)
         return v, u
 
@@ -246,7 +246,7 @@ class Tracker():
         :param width: width of image in pixels
         :return: particles
         """
-        particles['v'] = particles['phi'].apply(lambda angle: np.floor((np.pi/2 - angle) / np.pi * height))
+        particles['v'] = particles['phi'].apply(lambda angle: np.floor(-1*(np.pi/2 - angle) / np.pi * height + height))
         particles['u'] = particles['theta'].apply(lambda angle: np.floor((angle + np.pi) / (2 * np.pi) * width))
         return particles
 

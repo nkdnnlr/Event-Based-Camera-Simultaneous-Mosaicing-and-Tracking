@@ -329,8 +329,9 @@ if __name__ == '__main__':
     # rotations_likelihoodTrue = coordinate_transforms.q2R_df(poses_likelihoodTrue)
     # rotations_likelihoodTruessmall = coordinate_transforms.q2R_df(poses_likelihoodTruessmall)
 
-    compare_trajectories_2d(events_gen, rotations_likelihoodFalse, rotations_groundtruth, intensity_map)
+    compare_trajectories_2d(events_gen, rotations_groundtruth, rotations_groundtruth, intensity_map)
 
+    exit()
     compare_trajectories(rotations_groundtruth,
                          onlymotionupdate=rotations_onlymotionupdate,
                          likelihoodFlippedFalse=rotations_likelihoodFalse)#,
