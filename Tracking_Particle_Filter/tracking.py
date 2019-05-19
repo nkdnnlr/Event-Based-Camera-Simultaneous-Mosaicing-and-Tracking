@@ -21,23 +21,20 @@ import matplotlib.pyplot as plt
 # import matplotlib.animation as animation
 import sample.helpers as helpers
 
-
-
 data_dir = '../data/synth1'
 intensity_map = np.load('../output/intensity_map.npy')
 event_file = os.path.join(data_dir, 'events.txt')
 filename_poses = os.path.join(data_dir, 'poses.txt')
 outputdir_poses = '../output/poses/'
 
-
 # Constants
-degrees_rot = 70
-eventlikelihood_comparison_flipped = False
+degrees_rot = 5
+eventlikelihood_comparison_flipped = True
 num_particles = 1000
 num_events_batch = 300
-sigma_init1 = 0
-sigma_init2 = 0
-sigma_init3 = 0
+sigma_init1 = 0.0001
+sigma_init2 = 0.0001
+sigma_init3 = 0.0001
 factor = 1 / 300 * num_events_batch
 # sigma_likelihood = 8.0*1e-2
 contrast_threshold = 0.45
@@ -300,7 +297,7 @@ class Tracker():
 
         particles['Rotation'] = particles['Rotation'].apply(lambda x: np.dot(x, sp.expm(np.random.normal(0.0, abs(velocity*sigma_1)) * G3 +
                                                                                         np.random.normal(0.0, abs(velocity*sigma_2)) * G1 +
-                                                                                        np.random.normal(sigma_3, abs(velocity*sigma_3)) * G2)))
+                                                                                        np.random.normal(0.0, abs(velocity*sigma_3)) * G2)))
         np.random.normal()
 
         return particles
