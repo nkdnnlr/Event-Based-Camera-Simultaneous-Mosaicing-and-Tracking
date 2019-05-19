@@ -20,6 +20,14 @@ import Tracking_Particle_Filter.tracking as track
 import matplotlib.cm as cm
 
 
+
+def plot_events(events):
+
+    plt.figure()
+    plt.plot(events['x'], events['y'], 'r.')
+    plt.show()
+
+
 def compare_trajectories_2d(intensity_map, poses, event0):
     '''
 
@@ -89,18 +97,20 @@ def compare_trajectories_2d(intensity_map, poses, fourevents, poses_ours):
     # exit()
 
     angles = []
+    mappoints = []
     for i in range(5):
-        angle = tracker.event_and_particles_to_angles(fourevents.loc[i], poses_converted, calibration_inv, firstrotation_gt)
+        angle = tracker.event_and_particles_to_angles(fourevents.loc[i], poses_converted, calibration_inv)
         angles.append(angle.copy())
+        mappoint = tracker.angles2map_df(angle)
+        mappoints.append(mappoint.copy())
 
 
-
-    plt.figure()
-    plt.plot(angles[0]['theta'], angles[0]['phi'], 'b.', label='0')
-    plt.plot(angles[1]['theta'], angles[1]['phi'], 'r.', label='1')
-    plt.plot(angles[2]['theta'], angles[2]['phi'], 'g.', label='2')
-    plt.plot(angles[3]['theta'], angles[3]['phi'], 'y.', label='3')
-    plt.plot(angles[4]['theta'], angles[4]['phi'], 'k.', label='c')
+    plt.figure(1)
+    plt.plot(angles[0]['theta'], angles[0]['phi'], 'b.', label='0', markersize=0.5)
+    plt.plot(angles[1]['theta'], angles[1]['phi'], 'r.', label='1',markersize=0.5)
+    plt.plot(angles[2]['theta'], angles[2]['phi'], 'g.', label='2',markersize=0.5)
+    plt.plot(angles[3]['theta'], angles[3]['phi'], 'y.', label='3',markersize=0.5)
+    plt.plot(angles[4]['theta'], angles[4]['phi'], 'k.', label='c',markersize=0.5)
 
 
     # plt.plot(angles_ours['theta'], angles_ours['phi'], 'r.')
@@ -110,9 +120,34 @@ def compare_trajectories_2d(intensity_map, poses, fourevents, poses_ours):
     plt.xlim([-np.pi, np.pi])
     plt.ylim([-np.pi/2, np.pi/2])
 
-    # plt.imshow(intensity_map)
-    plt.show()
 
+    # plt.imshow(intensity_map)
+    # plt.show()
+    plt.figure(2)
+    # plt.figure(3)
+    intensity_map = np.load('../output/intensity_map.npy')
+    plt.imshow(intensity_map)
+
+    plt.plot(mappoints[0]['u'], mappoints[0]['v'], 'b.', label='0')
+    plt.plot(mappoints[1]['u'], mappoints[1]['v'], 'r.', label='1')
+    plt.plot(mappoints[2]['u'], mappoints[2]['v'], 'g.', label='2')
+    plt.plot(mappoints[3]['u'], mappoints[3]['v'], 'y.', label='3')
+    plt.plot(mappoints[4]['u'], mappoints[4]['v'], 'k.', label='c')
+
+
+    # plt.plot(angles_ours['theta'], angles_ours['phi'], 'r.')
+    plt.xlabel('u')
+    plt.ylabel('v')
+    plt.legend()
+    plt.xlim([0, 2047])
+    plt.ylim([0, 1023])
+
+
+
+
+
+
+    plt.show()
 
 
 
@@ -266,11 +301,11 @@ if __name__ == '__main__':
     data_dir = '../data/synth1'
     intensity_map = np.load('../output/intensity_map.npy')
     event_file = os.path.join(data_dir, 'events.txt')
-    events = helpers.load_events(filename=event_file, head=4)
-    print(events)
+    events = helpers.load_events(filename=event_file)
+    events = events[500000:600000]
 
     events_gen = helpers.generate_events()
-    print(events_gen)
+    plot_events(events)
 
     # exit()
     # for idx, event in events.iterrows():
@@ -282,8 +317,8 @@ if __name__ == '__main__':
     # ground truth
     filename_groundtruth = 'quaternions_18052019T170416.txt'
     poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth),
-                                           includes_translations=True)
-    rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth.head(300))
+                                           includes_translations=False)
+    rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth.head(2000))
     firstrotation_gt = rotations_groundtruth.loc[0, 'Rotation']
     print(firstrotation_gt)
 
@@ -292,6 +327,7 @@ if __name__ == '__main__':
     rotations_ours = coordinate_transforms.q2R_df(poses_onlymotionupdate)
 
     compare_trajectories_2d(intensity_map, rotations_groundtruth, events_gen, rotations_ours)
+
 
 
     # rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
