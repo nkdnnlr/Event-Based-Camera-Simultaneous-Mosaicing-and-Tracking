@@ -31,13 +31,13 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
-degrees_rot = 10
-eventlikelihood_comparison_flipped = False
+degrees_rot = 0.5
+eventlikelihood_comparison_flipped = True
 num_particles = 300
 num_events_batch = 300
-sigma_init1 = 0
-sigma_init2 = 0
-sigma_init3 = 0
+sigma_init1 = 0.001
+sigma_init2 = 0.001
+sigma_init3 = 0.001 
 factor = 1 / 300 * num_events_batch
 # sigma_likelihood = 8.0*1e-2
 contrast_threshold = 0.45
@@ -440,8 +440,6 @@ class Tracker():
         mean = sp.expm(liemean)
 
         return mean
-
-
 
     def run(self):
         """
