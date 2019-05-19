@@ -31,9 +31,9 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
-degrees_rot = 10
+degrees_rot = 70
 eventlikelihood_comparison_flipped = False
-num_particles = 300
+num_particles = 1000
 num_events_batch = 300
 sigma_init1 = 0
 sigma_init2 = 0
