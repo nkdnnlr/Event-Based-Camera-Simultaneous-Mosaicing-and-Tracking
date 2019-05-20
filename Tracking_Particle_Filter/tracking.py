@@ -1,5 +1,5 @@
 import sys
-# sys.path.append("..")
+sys.path.append("..")
 
 import time
 import sys
@@ -34,7 +34,7 @@ outputdir_poses = '../output/poses/'
 
 
 # Constants
-degrees_rot = 5
+degrees_rot = 45
 eventlikelihood_comparison_flipped = True
 num_particles = 1000
 num_events_batch = 300
