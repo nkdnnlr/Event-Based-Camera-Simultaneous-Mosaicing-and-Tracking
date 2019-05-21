@@ -1,0 +1,15 @@
+Datestring: 19052019T102528
+experiment: Finding optimal parameters
+eventlikelihood_comparison_flipped: True
+num_particles: 300
+num_events: 49509
+num_events_per_batch: 300
+sigma1: 0.0004
+sigma2: 0.0004
+sigma3: -0.0005287901912270614
+sigma_init1: 0.001
+sigma_init2: 0.001
+sigma_init3: 0.001
+sigma_likelihood: 0.17
+contrast_threshold: 0.45
+seconds_passed: 2009

@@ -307,7 +307,7 @@ if __name__ == '__main__':
     # rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
     filename_groundtruth = 'poses.txt'
     filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
-    filename_likelihoodFalse = 'quaternions_19052019T181204_lookinggood.txt'
+    filename_likelihoodFalse = 'quaternions_21052019T160029.txt'
 
     # filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
     # filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'
