@@ -542,6 +542,7 @@ class Tracker():
                               sigma1=sigma_1,
                               sigma2=sigma_2,
                               sigma3=sigma_3,
+                              factor=factor,
                               sigma_init1=sigma_init1,
                               sigma_init2=sigma_init2,
                               sigma_init3=sigma_init3,
