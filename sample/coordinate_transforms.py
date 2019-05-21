@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import scipy.linalg as sp
 
 
 def r2aa(R):
@@ -118,6 +119,83 @@ def q2R(q):
     R = u.dot(np.diag(np.array([1., 1., np.linalg.det(u.dot(v_T))]))).dot(v_T)
     return R
 
+def angvel2R_dict(df):
+    """
+    Calculates rotation matrices from angular velocities wx, wy, wz
+    :param df: Dataframe with poses including the columns 't', 'wx', 'wy', 'wz'
+    :return:
+    """
+    rotmats = {df.loc[0, 't']: np.eye(3)}
+
+    G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
+    G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
+    G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+
+    dx = 0
+    dy = 0
+    dz = 0
+
+
+    for idx, row in df.iloc[1:].copy().iterrows():
+        dt = df.loc[idx, 't'] - df.loc[idx-1, 't']
+        wx = (df.loc[idx-1, 'wx'] + df.loc[idx, 'wx'])/2.
+        wy = (df.loc[idx-1, 'wy'] + df.loc[idx, 'wy'])/2.
+        wz = (df.loc[idx-1, 'wz'] + df.loc[idx, 'wz'])/2.
+
+        dx += dt * wx
+        dy += dt * wy
+        dz += dt * wz
+
+        rotmats[df.loc[idx, 't']] = sp.expm(np.dot(dx, G1) +
+                                            np.dot(dy, G2) +
+                                            np.dot(dz, G3))
+
+    return rotmats
+
+
+def angvel2R_df(df):
+    """
+    Calculates rotation matrices from angular velocities wx, wy, wz
+    :param df: Dataframe with poses including the columns 't', 'wx', 'wy', 'wz'
+    :return:
+    """
+
+    rotmats =pd.DataFrame(columns=['t', 'Rotation'])
+    # rotmats.loc[0, 'Rotation'] = 0*np.eye(3)
+
+    G3 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
+    G1 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
+    G2 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+
+    dx = 0
+    dy = 0
+    dz = 0
+
+    rotmats.loc[0, 'Rotation'] = sp.expm(np.dot(dx, G1) +
+                                         np.dot(dy, G2) +
+                                         np.dot(dz, G3))
+
+    for idx, row in df.iloc[1:].copy().iterrows():
+        dt = df.loc[idx, 't'] - df.loc[idx - 1, 't']
+        wx = (df.loc[idx - 1, 'wx'] + df.loc[idx, 'wx']) / 2.
+        wy = (df.loc[idx - 1, 'wy'] + df.loc[idx, 'wy']) / 2.
+        wz = (df.loc[idx - 1, 'wz'] + df.loc[idx, 'wz']) / 2.
+
+        dx += dt * wx
+        dy += dt * wy
+        dz += dt * wz
+
+
+        rotmats.loc[idx, 'Rotation'] = sp.expm(np.dot(dx, G1) +
+                                               np.dot(dy, G2) +
+                                               np.dot(dz, G3))
+
+    rotmats['t'] = df['t']
+
+    return rotmats
+
+
+
 
 def q2R_dict(df):
     """
@@ -139,7 +217,7 @@ def q2R_df(df):
     :return:
     """
     # df['rotmats_ctrl'] = np.zeros((3,3))
-    rotmats =pd.DataFrame(columns = ['t','Rotation'])
+    rotmats =pd.DataFrame(columns=['t', 'Rotation'])
 
     for idx, row in df.copy().iterrows():
 

@@ -165,7 +165,7 @@ def compare_trajectories(df_groundtruth, **kwargs):
 
     import matplotlib.cm as cm
 
-    colormaps = ['bone', 'spring', 'summer', 'autumn']
+    colormaps = ['spring', 'summer', 'autumn', 'bone']
     i=0
     for key, df in kwargs.items():
         print(key)
@@ -283,12 +283,50 @@ def plot_unitsphere_matplot():
 
 
 if __name__ == '__main__':
+    ##Loading Camera poses
+    data_dir = '../data/Datasets/BigRoom/2019-04-29-17-20-59'
+    print("Loading Camera Orientations")
+    filename_poses = os.path.join(data_dir, 'imu.txt')
+    poses = helpers.load_poses_angvel(filename_poses=filename_poses)
+
+    # poses = pd.read_csv(filename_events, delimiter=' ', header=None, names=['time', 'x', 'y', 'qx', 'qy', 'qz', 'qw'])
+    num_poses = poses.size
+    print("Number of poses in file: ", num_poses)
+
+    # print(first_event)
+    # poses['t'] = poses['time'] - poses['time'].loc[0]
+    # poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
+    print("Head: \n", poses.head(10))
+    print("Tail: \n", poses.tail(10))
+
+    # Convert quaternions to rotation matrices and save in a dictionary TODO: UGLY AS HELL!!
+    rotmats = coordinate_transforms.angvel2R_df(poses)
+    print(rotmats)
+
+    compare_trajectories(rotmats,
+                         #onlymotionupdate=rotations_onlymotionupdate,
+                         rotations_ours=rotmats)#,
+
+    exit()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     directory_poses = '../output/poses/'
     data_dir = '../data/synth1'
     intensity_map = np.load('../output/intensity_map.npy')
     event_file = os.path.join(data_dir, 'events.txt')
-    events = helpers.load_events(filename=event_file, head=4)
+    events = helpers.load_events(filename=event_file, davis=False, head=4)
     print(events)
 
     events_gen = helpers.generate_events()
@@ -304,10 +342,9 @@ if __name__ == '__main__':
 
 
 
-    # rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
     filename_groundtruth = 'poses.txt'
     filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
-    filename_likelihoodFalse = 'quaternions_20052019T072843_long_1000particles.txt'
+    filename_ours = 'quaternions_21052019T081557.txt'
 
     # filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
     # filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'
@@ -315,7 +352,7 @@ if __name__ == '__main__':
 
     poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth), includes_translations=True)
     poses_onlymotionupdate = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_onlymotionupdate))
-    poses_likelihoodFalse = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodFalse))
+    poses_ours = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_ours))
     # poses_likelihoodTrue = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodTrue))
     # poses_likelihoodTruessmall = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_likelihoodTruessmall))
 
@@ -325,16 +362,18 @@ if __name__ == '__main__':
 
     rotations_groundtruth = coordinate_transforms.q2R_df(poses_groundtruth)
     rotations_onlymotionupdate = coordinate_transforms.q2R_df(poses_onlymotionupdate)
-    rotations_likelihoodFalse = coordinate_transforms.q2R_df(poses_likelihoodFalse)
-    # rotations_likelihoodTrue = coordinate_transforms.q2R_df(poses_likelihoodTrue)
+    rotations_ours = coordinate_transforms.q2R_df(poses_ours)
+    rotations_groundtruth_cut = cut_df_wrt_time(rotations_ours, rotations_groundtruth)
+
+    # rotations_likelihoodTrue = coordinate_transforms.q2R_df(pose                  s_likelihoodTrue)
     # rotations_likelihoodTruessmall = coordinate_transforms.q2R_df(poses_likelihoodTruessmall)
 
-    # compare_trajectories_2d(events_gen, rotations_likelihoodFalse, rotations_groundtruth, intensity_map)
+    # compare_trajectories_2d(events_gen, rotations_ours, rotations_groundtruth, intensity_map)
 
     # exit()
-    compare_trajectories(rotations_groundtruth,
-                         onlymotionupdate=rotations_onlymotionupdate,
-                         likelihoodFlippedFalse=rotations_likelihoodFalse)#,
+    compare_trajectories(rotations_groundtruth_cut,
+                         #onlymotionupdate=rotations_onlymotionupdate,
+                         rotations_ours=rotations_ours)#,
                          # likelihoodFlippedTrue=rotations_likelihoodTrue,
                          # likelihoodFlippedTruessmall=rotations_likelihoodTruessmall)
 # '''

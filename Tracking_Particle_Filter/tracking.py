@@ -31,14 +31,14 @@ filename_poses = os.path.join(data_dir, 'poses.txt')
 outputdir_poses = '../output/poses/'
 
 # Constants
-degrees_rot = 45
+degrees_rot = 20
 eventlikelihood_comparison_flipped = True
-num_particles = 1000
+num_particles = 2000
 num_events_batch = 300
-sigma_init1 = 0.0001
-sigma_init2 = 0.0001
-sigma_init3 = 0.0001
-factor = 1 / 300 * num_events_batch
+sigma_init1 = 0. #0.0001
+sigma_init2 = 0. #0.0001
+sigma_init3 = 0. #0.0001
+factor = 4 / 300 * num_events_batch
 # sigma_likelihood = 8.0*1e-2
 contrast_threshold = 0.45
 sigma_likelihood = 0.17
@@ -67,10 +67,6 @@ randomseed = None
 class Tracker():
     def __init__(self):
         self.calibration = self.camera_intrinsics()
-
-
-
-
 
         pass
 
@@ -461,9 +457,7 @@ class Tracker():
         print("Initialized particles: ", num_particles)
         calibration = self.camera_intrinsics()
         calibration_inv = np.linalg.inv(calibration)
-        events, num_events = helpers.load_events(event_file,
-                                                 head=total_nr_events_considered,
-                                                 return_number=True)
+        events, num_events = helpers.load_events(event_file, False, head=total_nr_events_considered, return_number=True)
         events = events.astype({'x': int, 'y': int})
         print(events.head(5))
         print("Events total: ", num_events)

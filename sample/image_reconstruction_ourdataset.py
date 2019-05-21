@@ -28,13 +28,14 @@ import pylab
 # Provide function handles to convert from rotation matrix to axis-angle and vice-versa
 import sample.integration_methods as integration_methods
 import sample.coordinate_transforms as coordinate_transforms
+import sample.helpers as helpers
 
 
 ## Run settings:
 num_events_batch = 300
-num_events_display = 6000
+num_events_display = 60000
 scale_res = 1 # Use Zweierpotenz
-plot_events_animation = False
+plot_events_animation = False #True
 plot_events_pm_animation = False
 
 # Methods used:
@@ -59,13 +60,13 @@ if not os.path.exists(images_dir):
 
 
 # Calibration data
-dvs_calibration = io.loadmat(os.path.join(calibration_dir, 'DVS_synth_undistorted_pixels_ours.mat'))
+dvs_calibration = io.loadmat(os.path.join(calibration_dir, 'DVS_synth_undistorted_pixels_ours_all.mat'))
 # Dictionary with entries ['__header__', '__version__', '__globals__',
 #                          'Kint', 'dist_coeffs', 'image_height', 'image_width',
 #                          'pixels_grid', 'undist_pix', 'undist_pix_calibrated',
 #                          'undist_pix_mat_x', 'undist_pix_mat_y'])
 
-dvs_parameters = {'sensor_height': 128, 'sensor_width': 128, 'contrast_threshold': 0.202}
+dvs_parameters = {'sensor_height': 260, 'sensor_width': 346, 'contrast_threshold': 0.202}
 
 
 ## ___Main algorithmic parameters___
@@ -90,7 +91,7 @@ integration_method = 'frankotchellappa'
 
 ## Loading Events
 print("Loading Events")
-filename_events = os.path.join(data_dir, 'events_cropped.txt')
+filename_events = os.path.join(data_dir, 'events.txt')
 
 events = pd.read_csv(filename_events, delimiter=' ',
                      header=None,
@@ -108,20 +109,23 @@ print("Tail: \n", events.tail(10))
 
 ##Loading Camera poses
 print("Loading Camera Orientations")
-filename_events = os.path.join(data_dir, 'imu.txt')
-poses = pd.read_csv(filename_events, delimiter=' ', header=None, names=['time', 'x', 'y', 'qx', 'qy', 'qz', 'qw'])
+filename_poses = os.path.join(data_dir, 'imu.txt')
+poses = helpers.load_poses_angvel(filename_poses=filename_poses)
+
+# poses = pd.read_csv(filename_events, delimiter=' ', header=None, names=['time', 'x', 'y', 'qx', 'qy', 'qz', 'qw'])
 num_poses = poses.size
 print("Number of poses in file: ", num_poses)
 
-print(first_event)
-poses['t'] = poses['time'] - poses['time'].loc[0]
-poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
+# print(first_event)
+# poses['t'] = poses['time'] - poses['time'].loc[0]
+# poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
 print("Head: \n", poses.head(10))
 print("Tail: \n", poses.tail(10))
-# exit()
 
 # Convert quaternions to rotation matrices and save in a dictionary TODO: UGLY AS HELL!!
-rotmats_dict = coordinate_transforms.q2R_dict(poses)
+rotmats_dict = coordinate_transforms.angvel2R_dict(poses)
+# print(rotmats_dict)
+# exit()
 
 
 ## Image reconstruction using pixel-wise EKF
@@ -213,8 +217,9 @@ while True:
 
     # Get time of previous event at same DVS pixel
     idx_to_mat = x_events_batch * dvs_parameters['sensor_height'] + y_events_batch
+    # print(idx_to_mat)
 
-    t_prev_batch = np.array([event_map[int(x), int(y)]['sae'] for x, y in zip(x_events_batch, y_events_batch)]).T
+    t_prev_batch = np.array([event_map[int(y), int(x)]['sae'] for x, y in zip(x_events_batch, y_events_batch)]).T
 
     #Get (interpolated) rotation of current event
     first_idx  = t_events_batch.index[0]
@@ -249,11 +254,11 @@ while True:
     #  Get map point corresponding to previous event at same pixel
     rotated_vec_prev = np.zeros(rotated_vec.shape)
     for ii in range(num_events_batch):
-        Rot_prev = event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'].copy()
+        Rot_prev = event_map[y_events_batch.iloc[ii]][x_events_batch.iloc[ii]]['rotation'].copy()
         rotated_vec_prev[:, ii] = rot0.T.dot(Rot_prev).dot(bearing_vec[:, ii])
         # Update last rotation and time of event(SAE)
-        event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['sae'] = t_events_batch.iloc[ii]
-        event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'] = Rot
+        event_map[y_events_batch.iloc[ii]][x_events_batch.iloc[ii]]['sae'] = t_events_batch.iloc[ii]
+        event_map[y_events_batch.iloc[ii]][x_events_batch.iloc[ii]]['rotation'] = Rot
 
     pm_prev = coordinate_transforms.project_equirectangular_projection(rotated_vec_prev, output_width, output_height)
 
@@ -305,6 +310,7 @@ while True:
     if measurement_criterion == 'contrast':
         # Use contrast as measurement function
         dhdg = vel.T * np.array([tc * pol_events_batch, tc * pol_events_batch]).T # derivative of measurement function
+
         nu_innovation = dvs_parameters['contrast_threshold'] - np.sum(dhdg * gm, axis=1)
     else:
         # Use the event rate as measurement function

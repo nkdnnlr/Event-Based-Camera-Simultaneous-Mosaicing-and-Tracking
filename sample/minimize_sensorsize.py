@@ -29,16 +29,16 @@ print(events.describe())
 
 print("Cropping...")
 
-events = (events[(events.x >= x_min_cropped) & (events.x < x_max_cropped) &
+events_cropped = (events[(events.x >= x_min_cropped) & (events.x < x_max_cropped) &
                  (events.y >= y_min_cropped) & (events.y < y_max_cropped)].reset_index(drop=True))
 
-events['x'] = events['x'] - x_min_cropped
-events['y'] = events['y'] - y_min_cropped
+# events['x'] = events['x'] - x_min_cropped
+# events['y'] = events['y'] - y_min_cropped
 
-print(events.describe())
+print(events_cropped.describe())
 
 print("Writing...")
 
-events.to_csv(os.path.join(directory, 'events_cropped.txt'), header=None, index=None, sep=' ', mode='a')
+events_cropped.to_csv(os.path.join(directory, 'events_cropped_all.txt'), header=None, index=None, sep=' ', mode='a')
 
 print("\n Done after {} seconds.".format(time.time() - starttime))

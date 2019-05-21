@@ -43,6 +43,27 @@ def load_poses(filename_poses, includes_translations=False):
 
     return poses
 
+
+def load_poses_angvel(filename_poses, includes_translations=True):
+    """
+    gets poses from poses file
+    :param filename_poses: filename of poses
+    :return:
+    """
+
+    if includes_translations:
+        poses = pd.read_csv(filename_poses, delimiter=' ', header=None, names=['time', 'x', 'y', 'z', 'wx', 'wy', 'wz'])
+        poses['t'] = poses['time'] - poses['time'].loc[0]  # time_ctrl in MATLAB
+    else:
+        poses = pd.read_csv(filename_poses, delimiter=' ', header=None, names=['time', 'wx', 'wy', 'wz'])
+        poses['t'] = poses['time'] - poses['time'].loc[0]  # time_ctrl in MATLAB
+
+    poses = poses[['t', 'wx', 'wy', 'wz']]
+    num_poses = poses.size
+
+    return poses
+
+
 def load_events(filename, davis=False, head=None, return_number=False):
     """
     Loads events in file specified by filename (txt file)
