@@ -284,30 +284,30 @@ def plot_unitsphere_matplot():
 
 if __name__ == '__main__':
     ##Loading Camera poses
-    data_dir = '../data/Datasets/BigRoom/2019-04-29-17-20-59'
-    print("Loading Camera Orientations")
-    filename_poses = os.path.join(data_dir, 'imu.txt')
-    poses = helpers.load_poses_angvel(filename_poses=filename_poses)
-
-    # poses = pd.read_csv(filename_events, delimiter=' ', header=None, names=['time', 'x', 'y', 'qx', 'qy', 'qz', 'qw'])
-    num_poses = poses.size
-    print("Number of poses in file: ", num_poses)
-
-    # print(first_event)
-    # poses['t'] = poses['time'] - poses['time'].loc[0]
-    # poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
-    print("Head: \n", poses.head(10))
-    print("Tail: \n", poses.tail(10))
-
-    # Convert quaternions to rotation matrices and save in a dictionary TODO: UGLY AS HELL!!
-    rotmats = coordinate_transforms.angvel2R_df(poses)
-    print(rotmats)
-
-    compare_trajectories(rotmats,
-                         #onlymotionupdate=rotations_onlymotionupdate,
-                         rotations_ours=rotmats)#,
-
-    exit()
+    # data_dir = '../data/Datasets/BigRoom/2019-04-29-17-20-59'
+    # print("Loading Camera Orientations")
+    # filename_poses = os.path.join(data_dir, 'imu.txt')
+    # poses = helpers.load_poses_angvel(filename_poses=filename_poses)
+    #
+    # # poses = pd.read_csv(filename_events, delimiter=' ', header=None, names=['time', 'x', 'y', 'qx', 'qy', 'qz', 'qw'])
+    # num_poses = poses.size
+    # print("Number of poses in file: ", num_poses)
+    #
+    # # print(first_event)
+    # # poses['t'] = poses['time'] - poses['time'].loc[0]
+    # # poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
+    # print("Head: \n", poses.head(10))
+    # print("Tail: \n", poses.tail(10))
+    #
+    # # Convert quaternions to rotation matrices and save in a dictionary TODO: UGLY AS HELL!!
+    # rotmats = coordinate_transforms.angvel2R_df(poses)
+    # print(rotmats)
+    #
+    # compare_trajectories(rotmats,
+    #                      #onlymotionupdate=rotations_onlymotionupdate,
+    #                      rotations_ours=rotmats)#,
+    #
+    # exit()
 
 
 
@@ -344,7 +344,7 @@ if __name__ == '__main__':
 
     filename_groundtruth = 'poses.txt'
     filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
-    filename_ours = 'quaternions_21052019T081557.txt'
+    filename_ours = 'quaternions_21052019T160029.txt'
 
     # filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
     # filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'

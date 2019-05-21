@@ -31,10 +31,10 @@ filename_poses = os.path.join(data_dir, 'poses.txt')
 outputdir_poses = '../output/poses/'
 
 # Constants
-degrees_rot = 20
+degrees_rot = 30
 eventlikelihood_comparison_flipped = True
 num_particles = 2000
-num_events_batch = 300
+num_events_batch = 100
 sigma_init1 = 0. #0.0001
 sigma_init2 = 0. #0.0001
 sigma_init3 = 0. #0.0001
@@ -88,7 +88,6 @@ class Tracker():
         # K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
 
         #from Guillermo:
-        # TODO: Looks better if x_0 and x_y is increased. Why?
         K = np.array([[91.4014729896821, 0.0, 64.0],
                       [0.0, 91.4014729896821, 64.0],
                       [0, 0, 1]])
@@ -401,7 +400,6 @@ class Tracker():
 
 
     def resampling(self, particles):
-        #TODO: Check if it really does what it should. Looks really scary with the if-conditions.
         '''
         resamples particles
         :param particles:
