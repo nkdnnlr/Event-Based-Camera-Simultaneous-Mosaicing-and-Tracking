@@ -1,5 +1,5 @@
 import sys
-# sys.path.append("..")
+sys.path.append("..")
 
 import time
 import sys
@@ -31,14 +31,14 @@ filename_poses = os.path.join(data_dir, 'poses.txt')
 outputdir_poses = '../output/poses/'
 
 # Constants
-degrees_rot = 10
+degrees_rot = 45
 eventlikelihood_comparison_flipped = True
-num_particles = 100
-num_events_batch = 10
-sigma_init1 = 0.0
-sigma_init2 = 0.0
-sigma_init3 = 0.0
-factor = 8 / 300 * num_events_batch
+num_particles = 1000
+num_events_batch = 300
+sigma_init1 = 0.0001
+sigma_init2 = 0.0001
+sigma_init3 = 0.0001
+factor = 1 / 300 * num_events_batch
 # sigma_likelihood = 8.0*1e-2
 contrast_threshold = 0.45
 sigma_likelihood = 0.17
@@ -545,7 +545,6 @@ class Tracker():
                               sigma_init1=sigma_init1,
                               sigma_init2=sigma_init2,
                               sigma_init3=sigma_init3,
-                              factor = factor,
                               sigma_likelihood=sigma_likelihood,
                               contrast_threshold=contrast_threshold,
                               seconds_passed=time_passed)

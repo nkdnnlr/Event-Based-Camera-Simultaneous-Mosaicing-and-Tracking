@@ -43,26 +43,43 @@ def load_poses(filename_poses, includes_translations=False):
 
     return poses
 
-def load_events(filename, head=None, return_number=False):
+def load_events(filename, davis=False, head=None, return_number=False):
     """
     Loads events in file specified by filename (txt file)
+    :param davis:
     :param filename: filename to events.txt
     :return: events
     """
     print("Loading Events")
-    # Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
-    events = pd.read_csv(filename, delimiter=' ',
-                         header=None,
-                         names=['sec', 'nsec', 'x', 'y', 'pol'])
-    # print("Head: \n", events.head(10))
-    num_events = events.count()
-    print("Number of events in file: ", num_events)
 
-    # Remove time of offset
-    first_event_sec = events.loc[0, 'sec']
-    first_event_nsec = events.loc[0, 'nsec']
-    events['t'] = events['sec'] - first_event_sec + 1e-9 * (events['nsec'] - first_event_nsec)
-    events = events[['t', 'x', 'y', 'pol']]
+    if not davis:
+
+    # Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
+        events = pd.read_csv(filename, delimiter=' ',
+                             header=None,
+                             names=['sec', 'nsec', 'x', 'y', 'pol'])
+        # print("Head: \n", events.head(10))
+        num_events = events.count()
+        print("Number of events in file: ", num_events)
+
+        # Remove time of offset
+        first_event_sec = events.loc[0, 'sec']
+        first_event_nsec = events.loc[0, 'nsec']
+        events['t'] = events['sec'] - first_event_sec + 1e-9 * (events['nsec'] - first_event_nsec)
+        events = events[['t', 'x', 'y', 'pol']]
+
+    else:
+        print("DAVIS")
+        events = pd.read_csv(filename, delimiter=' ',
+                             header=None,
+                             names=['time', 'x', 'y', 'pol'])
+        # print("Head: \n", events.head(10))
+        num_events = events.count()
+        print("Number of events in file: ", num_events)
+        first_event = events.loc[0, 'time']
+        events['t'] = events['time'] - first_event
+        events = events[['t', 'x', 'y', 'pol']]
+
 
     if return_number:
         if head is None:
@@ -261,7 +278,7 @@ if __name__ == '__main__':
     filename_poses = os.path.join(data_dir, 'poses.txt')
     filename_events = os.path.join(data_dir, 'events.txt')
 
-    all_events = load_events(filename_events, head=3624650, return_number=True)
+    all_events = load_events(filename_events, False, head=3624650, return_number=True)
     # print(type(all_events))
     print(all_events)
     exit()
