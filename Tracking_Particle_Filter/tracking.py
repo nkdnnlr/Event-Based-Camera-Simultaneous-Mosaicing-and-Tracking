@@ -31,14 +31,14 @@ filename_poses = os.path.join(data_dir, 'poses.txt')
 outputdir_poses = '../output/poses/'
 
 # Constants
-degrees_rot = 5
+degrees_rot = 7
 eventlikelihood_comparison_flipped = True
-num_particles = 1000
-num_events_batch = 300
-sigma_init1 = 0.0001
-sigma_init2 = 0.0001
-sigma_init3 = 0.0001
-factor = 1 / 300 * num_events_batch
+num_particles = 2000
+num_events_batch = 100
+sigma_init1 = 0.
+sigma_init2 = 0.
+sigma_init3 = 0.
+factor = 16* 1 / 300 * num_events_batch
 # sigma_likelihood = 8.0*1e-2
 contrast_threshold = 0.45
 sigma_likelihood = 0.17
