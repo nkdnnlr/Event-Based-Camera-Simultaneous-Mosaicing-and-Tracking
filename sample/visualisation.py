@@ -53,7 +53,7 @@ def compare_trajectories_2d(intensity_map, poses, event0):
 
 
 
-def compare_trajectories_2d(fourevents, poses_gt, poses_ours, intensity_map):
+def compare_trajectories_2d(fourevents, poses_ours, poses_gt, intensity_map):
     '''
 
     :param intensity_map:
@@ -115,19 +115,34 @@ def compare_trajectories_2d(fourevents, poses_gt, poses_ours, intensity_map):
     # intensity_map = np.load('../output/intensity_map.npy')
     plt.imshow(intensity_map)
 
-    plt.plot(mappoints[0]['u'], mappoints[0]['v'], 'b.', label='0')
-    plt.plot(mappoints[1]['u'], mappoints[1]['v'], 'r.', label='1')
-    plt.plot(mappoints[2]['u'], mappoints[2]['v'], 'g.', label='2')
-    plt.plot(mappoints[3]['u'], mappoints[3]['v'], 'y.', label='3')
-    plt.plot(mappoints[4]['u'], mappoints[4]['v'], 'k.', label='c')
+    # plt.plot(mappoints[0]['u'], mappoints[0]['v'], 'b.', label='0')
+    # plt.plot(mappoints[1]['u'], mappoints[1]['v'], 'r.', label='1')
+    # plt.plot(mappoints[2]['u'], mappoints[2]['v'], 'g.', label='2')
+    # plt.plot(mappoints[3]['u'], mappoints[3]['v'], 'y.', label='3')
+    plt.scatter(mappoints[4]['u'], mappoints[4]['v'], color='r', s=2, label='ground truth')
+
+    angles = []
+    mappoints = []
+    for i in range(5):
+        angle = tracker.event_and_particles_to_angles(fourevents.loc[i], poses_converted_ours, calibration_inv)
+        angles.append(angle.copy())
+        mappoint = tracker.angles2map_df(angle)
+        mappoints.append(mappoint.copy())
+
+
+    # plt.plot(mappoints[0]['u'], mappoints[0]['v'], 'b.', label='0')
+    # plt.plot(mappoints[1]['u'], mappoints[1]['v'], 'r.', label='1')
+    # plt.plot(mappoints[2]['u'], mappoints[2]['v'], 'g.', label='2')
+    # plt.plot(mappoints[3]['u'], mappoints[3]['v'], 'y.', label='3')
+    plt.scatter(mappoints[4]['u'], mappoints[4]['v'], color='y', s=2, label='tracker')
 
 
     # plt.plot(angles_ours['theta'], angles_ours['phi'], 'r.')
     plt.xlabel('u')
     plt.ylabel('v')
     plt.legend()
-    plt.xlim([0, 2047])
-    plt.ylim([0, 1023])
+    plt.xlim([0+700, 2047-700])
+    plt.ylim([1023-300, 0+300])
 
 
 
@@ -324,7 +339,7 @@ if __name__ == '__main__':
 
     directory_poses = '../output/poses/'
     data_dir = '../data/synth1'
-    intensity_map = np.load('../output/intensity_map.npy')
+    intensity_map = np.load('../output/intensity_map2.npy')
     event_file = os.path.join(data_dir, 'events.txt')
     events = helpers.load_events(filename=event_file, davis=False, head=4)
     print(events)
@@ -344,7 +359,7 @@ if __name__ == '__main__':
 
     filename_groundtruth = 'poses.txt'
     filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
-    filename_ours = 'quaternions_21052019T160029.txt'
+    filename_ours = 'quaternions_22052019T153630_verynice.txt'
 
     # filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
     # filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'
@@ -368,7 +383,7 @@ if __name__ == '__main__':
     # rotations_likelihoodTrue = coordinate_transforms.q2R_df(pose                  s_likelihoodTrue)
     # rotations_likelihoodTruessmall = coordinate_transforms.q2R_df(poses_likelihoodTruessmall)
 
-    # compare_trajectories_2d(events_gen, rotations_ours, rotations_groundtruth, intensity_map)
+    compare_trajectories_2d(events_gen, rotations_ours, rotations_groundtruth_cut, intensity_map)
 
     # exit()
     compare_trajectories(rotations_groundtruth_cut,

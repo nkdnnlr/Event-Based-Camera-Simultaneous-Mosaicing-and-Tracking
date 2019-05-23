@@ -3,10 +3,8 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 
 import sample.helpers as helpers
-# import sample.
 
 
 def score_quaternions(output_file, poses_gt, poses_tracker):
@@ -59,7 +57,7 @@ if __name__ == '__main__':
     filename_groundtruth = 'poses.txt'
     directory_output = '../output/evaluation'
     filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
-    filename_ours = 'quaternions_21052019T160029.txt'
+    filename_ours = 'quaternions_22052019T153630_verynice.txt'
     filename_output = os.path.join(directory_output, filename_ours[:-4] + '.png')
 
     poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth),

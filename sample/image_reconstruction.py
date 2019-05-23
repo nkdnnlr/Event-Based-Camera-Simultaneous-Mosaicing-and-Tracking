@@ -35,7 +35,7 @@ num_events_batch = 3000
 num_events_display = 600000
 scale_res = 1 # Use Zweierpotenz
 plot_events_animation =  False
-plot_events_pm_animation = True #False
+plot_events_pm_animation = False
 
 # Methods used:
 # 1) Select measurement function used for brightness gradient estimation
@@ -435,7 +435,7 @@ mask = trace_map > 0.05  # % reconstruct only gradients with small covariance
 grad_map_clip['x'][mask] = 0
 grad_map_clip['x'][mask] = 0
 rec_image = integration_methods.frankotchellappa(grad_map_clip['x'], grad_map_clip['y']);
-rec_image = rec_image - np.mean(rec_image)
+rec_image = -rec_image + np.mean(rec_image)
 
 rec_image_normalized = rec_image / np.max(np.abs(rec_image))
 fig_normalized = plt.figure(1)

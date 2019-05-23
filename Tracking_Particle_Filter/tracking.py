@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import sample.helpers as helpers
 
 data_dir = '../data/synth1'
-intensity_map = np.load('../output/intensity_map.npy')
+intensity_map = np.load('../output/intensity_map2.npy')
 event_file = os.path.join(data_dir, 'events.txt')
 filename_poses = os.path.join(data_dir, 'poses.txt')
 outputdir_poses = '../output/poses/'
