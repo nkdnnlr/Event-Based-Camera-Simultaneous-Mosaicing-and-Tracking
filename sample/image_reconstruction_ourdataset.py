@@ -28,13 +28,14 @@ import pylab
 # Provide function handles to convert from rotation matrix to axis-angle and vice-versa
 import sample.integration_methods as integration_methods
 import sample.coordinate_transforms as coordinate_transforms
+import sample.helpers as helpers
 
 
 ## Run settings:
 num_events_batch = 300
-num_events_display = 6000
+num_events_display = 60000
 scale_res = 1 # Use Zweierpotenz
-plot_events_animation = False
+plot_events_animation = False #True
 plot_events_pm_animation = False
 
 # Methods used:
@@ -49,9 +50,9 @@ measurement_criterion = 'contrast'
 
 time_0 = time.time()
 # Data directories
-data_dir = '../data/synth1'
+data_dir = '../data/Datasets/BigRoom/2019-04-29-17-20-59'
 calibration_dir = '../data/calibration'
-output_dir = '../output'
+output_dir = '../output/ourdataset'
 images_dir = os.path.join(output_dir, '{0}pbatch_{1}'.format(num_events_batch, measurement_criterion))
 print(images_dir)
 if not os.path.exists(images_dir):
@@ -59,13 +60,13 @@ if not os.path.exists(images_dir):
 
 
 # Calibration data
-dvs_calibration = io.loadmat(os.path.join(calibration_dir, 'DVS_synth_undistorted_pixels.mat'))
+dvs_calibration = io.loadmat(os.path.join(calibration_dir, 'DVS_synth_undistorted_pixels_ours_all.mat'))
 # Dictionary with entries ['__header__', '__version__', '__globals__',
 #                          'Kint', 'dist_coeffs', 'image_height', 'image_width',
 #                          'pixels_grid', 'undist_pix', 'undist_pix_calibrated',
 #                          'undist_pix_mat_x', 'undist_pix_mat_y'])
 
-dvs_parameters = {'sensor_height': 128, 'sensor_width': 128, 'contrast_threshold': 0.45}
+dvs_parameters = {'sensor_height': 260, 'sensor_width': 346, 'contrast_threshold': 0.202}
 
 
 ## ___Main algorithmic parameters___
@@ -77,7 +78,7 @@ output_width = 2 * output_height
 
 # Set the expected noise level (variance of the measurements).
 if measurement_criterion == 'contrast':
-    var_R = 0.17**2 # units[C_th] ^ 2
+    var_R = 0.035**2 # units[C_th] ^ 2
 if measurement_criterion == 'event_rate':
     var_R = 1e2**2  # units[1 / second] ^ 2
 
@@ -91,34 +92,40 @@ integration_method = 'frankotchellappa'
 ## Loading Events
 print("Loading Events")
 filename_events = os.path.join(data_dir, 'events.txt')
-# Events have time in whole sec, time in ns, x in ]0, 127[, y in ]0, 127[
-events = pd.read_csv(filename_events, delimiter=' ', header=None, names=['sec', 'nsec', 'x', 'y', 'pol'])
+
+events = pd.read_csv(filename_events, delimiter=' ',
+                     header=None,
+                     names=['time', 'x', 'y', 'pol'])
+
 # print("Head: \n", events.head(10))
 num_events = events.size
 print("Number of events in file: ", num_events)
-
-# Remove time of offset
-first_event_sec = events.loc[0, 'sec']
-first_event_nsec = events.loc[0, 'nsec']
-events['t'] = events['sec']-first_event_sec + 1e-9*(events['nsec']-first_event_nsec)
+first_event = events.loc[0, 'time']
+events['t'] = events['time'] - first_event
 events = events[['t', 'x', 'y', 'pol']]
+
 print("Head: \n", events.head(10))
 print("Tail: \n", events.tail(10))
 
 ##Loading Camera poses
 print("Loading Camera Orientations")
-filename_events = os.path.join(data_dir, 'poses.txt')
-poses = pd.read_csv(filename_events, delimiter=' ', header=None, names=['sec', 'nsec', 'x', 'y', 'z', 'qx', 'qy', 'qz', 'qw'])
+filename_poses = os.path.join(data_dir, 'imu.txt')
+poses = helpers.load_poses_angvel(filename_poses=filename_poses)
+
+# poses = pd.read_csv(filename_events, delimiter=' ', header=None, names=['time', 'x', 'y', 'qx', 'qy', 'qz', 'qw'])
 num_poses = poses.size
 print("Number of poses in file: ", num_poses)
 
-poses['t'] = poses['sec']-first_event_sec + 1e-9*(poses['nsec']-first_event_nsec) #time_ctrl in MATLAB
-poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
+# print(first_event)
+# poses['t'] = poses['time'] - poses['time'].loc[0]
+# poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
 print("Head: \n", poses.head(10))
 print("Tail: \n", poses.tail(10))
 
 # Convert quaternions to rotation matrices and save in a dictionary TODO: UGLY AS HELL!!
-rotmats_dict = coordinate_transforms.q2R_dict(poses)
+rotmats_dict = coordinate_transforms.angvel2R_dict(poses)
+# print(rotmats_dict)
+# exit()
 
 
 ## Image reconstruction using pixel-wise EKF
@@ -183,6 +190,11 @@ i=0
 # counter = -1
 while True:
     # counter += 1
+    # print("Here")
+    # print(iEv)
+    # print(num_events_batch)
+    # print(num_events.loc['time'])
+    # exit()
     if (iEv + num_events_batch > num_events):
         print("No more events")
         break
@@ -196,8 +208,8 @@ while True:
 
 
     t_events_batch = events_batch['t']
-    x_events_batch = events_batch['x']
-    y_events_batch = events_batch['y']
+    x_events_batch = events_batch['x'].astype(int)
+    y_events_batch = events_batch['y'].astype(int)
     pol_events_batch = 2 * (events_batch['pol'] - 0.5)
 
 
@@ -205,8 +217,9 @@ while True:
 
     # Get time of previous event at same DVS pixel
     idx_to_mat = x_events_batch * dvs_parameters['sensor_height'] + y_events_batch
+    # print(idx_to_mat)
 
-    t_prev_batch = np.array([event_map[x, y]['sae'] for x, y in zip(x_events_batch, y_events_batch)]).T
+    t_prev_batch = np.array([event_map[int(y), int(x)]['sae'] for x, y in zip(x_events_batch, y_events_batch)]).T
 
     #Get (interpolated) rotation of current event
     first_idx  = t_events_batch.index[0]
@@ -231,17 +244,21 @@ while True:
         break
 
     # Get map point corresponding to current event
+    # print(Rot)
+    # print(rot0)
+    # print(bearing_vec)
+    # exit()
     rotated_vec = rot0.T.dot(Rot).dot(bearing_vec)
     pm = coordinate_transforms.project_equirectangular_projection(rotated_vec, output_width, output_height)
 
     #  Get map point corresponding to previous event at same pixel
     rotated_vec_prev = np.zeros(rotated_vec.shape)
     for ii in range(num_events_batch):
-        Rot_prev = event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'].copy()
+        Rot_prev = event_map[y_events_batch.iloc[ii]][x_events_batch.iloc[ii]]['rotation'].copy()
         rotated_vec_prev[:, ii] = rot0.T.dot(Rot_prev).dot(bearing_vec[:, ii])
         # Update last rotation and time of event(SAE)
-        event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['sae'] = t_events_batch.iloc[ii]
-        event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'] = Rot
+        event_map[y_events_batch.iloc[ii]][x_events_batch.iloc[ii]]['sae'] = t_events_batch.iloc[ii]
+        event_map[y_events_batch.iloc[ii]][x_events_batch.iloc[ii]]['rotation'] = Rot
 
     pm_prev = coordinate_transforms.project_equirectangular_projection(rotated_vec_prev, output_width, output_height)
 
@@ -293,6 +310,7 @@ while True:
     if measurement_criterion == 'contrast':
         # Use contrast as measurement function
         dhdg = vel.T * np.array([tc * pol_events_batch, tc * pol_events_batch]).T # derivative of measurement function
+
         nu_innovation = dvs_parameters['contrast_threshold'] - np.sum(dhdg * gm, axis=1)
     else:
         # Use the event rate as measurement function
@@ -422,7 +440,7 @@ trace_map = grad_map_covar['xx'] + grad_map_covar['yy']
 grad_map_clip = {}
 grad_map_clip['x'] = grad_map['x']
 grad_map_clip['y'] = grad_map['y']
-mask = trace_map > 0.05  # % reconstruct only gradients with small covariance
+mask = trace_map > 0.01  # % reconstruct only gradients with small covariance
 grad_map_clip['x'][mask] = 0
 grad_map_clip['x'][mask] = 0
 rec_image = integration_methods.frankotchellappa(grad_map_clip['x'], grad_map_clip['y']);

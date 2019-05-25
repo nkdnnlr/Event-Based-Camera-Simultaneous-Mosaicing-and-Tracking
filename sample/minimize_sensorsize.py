@@ -1,32 +1,44 @@
 import os
+import time
 import pandas as pd
-from helpers import load_events
+from sample.helpers import load_events
+
+starttime = time.time()
+
 
 # Todo: Finish
-size=64
+size_x = 128
+size_y = 128
 
-events, num_events = load_events('events.txt',head=None , return_number=True)
+center = True
 
-events_small_sensor = pd.DataFrame(columns=['t', 'x', 'y', 'pol'])
+directory = '../data/Datasets/BigRoom/2019-04-29-17-20-59'
+events, num_events = load_events(os.path.join(directory, 'events.txt'), True, head=None, return_number=True)
 
-'''
-def check_and_write(row):
-    if row['x'].values <= size:
-        df = events_small_sensor.append(row)
-        return
+x_min = events['x'].min()
+x_max = events['x'].max()
+y_min = events['y'].min()
+y_max = events['y'].max()
 
-print(check_and_write(events.iloc[[2]]))
+x_min_cropped = (x_max - x_min + 1) / 2. + x_min - size_x / 2 - 1
+x_max_cropped = (x_max - x_min + 1) / 2. + x_min + size_x / 2 - 1
+y_min_cropped = (y_max - y_min + 1) / 2. + y_min - size_y / 2 - 1
+y_max_cropped = (y_max - y_min + 1) / 2. + y_min + size_y / 2 - 1
 
-events.iloc[[1]].apply(lambda r: check_and_write(r))
-'''
+print(events.describe())
 
-for i in range(3624659):
-    # print(i)
-    if events.iloc[[i]]['x'].values <= size and events.iloc[[i]]['y'].values <= size:
-        events_small_sensor = events_small_sensor.append(events.iloc[[i]])
-    else:
-        None
+print("Cropping...")
 
-print(events_small_sensor)
+events_cropped = (events[(events.x >= x_min_cropped) & (events.x < x_max_cropped) &
+                 (events.y >= y_min_cropped) & (events.y < y_max_cropped)].reset_index(drop=True))
 
-events_small_sensor.to_csv('/Users/JoelBachmann/Desktop/FS19/3D Vision/Project/Event-Based-Camera-Simultaneous-Mosaicing-and-Tracking/Tracking_Particle_Filter/events_small_sensor.txt', header=None, index=None, sep=' ', mode='a')
+# events['x'] = events['x'] - x_min_cropped
+# events['y'] = events['y'] - y_min_cropped
+
+print(events_cropped.describe())
+
+print("Writing...")
+
+events_cropped.to_csv(os.path.join(directory, 'events_cropped_all.txt'), header=None, index=None, sep=' ', mode='a')
+
+print("\n Done after {} seconds.".format(time.time() - starttime))

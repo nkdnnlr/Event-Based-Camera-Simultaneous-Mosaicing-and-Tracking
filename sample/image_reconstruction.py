@@ -31,10 +31,10 @@ import sample.coordinate_transforms as coordinate_transforms
 
 
 ## Run settings:
-num_events_batch = 300
-num_events_display = 6000
+num_events_batch = 3000
+num_events_display = 600000
 scale_res = 1 # Use Zweierpotenz
-plot_events_animation = False
+plot_events_animation =  False
 plot_events_pm_animation = False
 
 # Methods used:
@@ -119,6 +119,8 @@ print("Tail: \n", poses.tail(10))
 
 # Convert quaternions to rotation matrices and save in a dictionary TODO: UGLY AS HELL!!
 rotmats_dict = coordinate_transforms.q2R_dict(poses)
+# print(rotmats_dict)
+# exit()
 
 
 ## Image reconstruction using pixel-wise EKF
@@ -183,6 +185,7 @@ i=0
 # counter = -1
 while True:
     # counter += 1
+
     if (iEv + num_events_batch > num_events):
         print("No more events")
         break
@@ -206,7 +209,7 @@ while True:
     # Get time of previous event at same DVS pixel
     idx_to_mat = x_events_batch * dvs_parameters['sensor_height'] + y_events_batch
 
-    t_prev_batch = np.array([event_map[x, y]['sae'] for x, y in zip(x_events_batch, y_events_batch)]).T
+    t_prev_batch = np.array([event_map[y, x]['sae'] for x, y in zip(x_events_batch, y_events_batch)]).T
 
     #Get (interpolated) rotation of current event
     first_idx  = t_events_batch.index[0]
@@ -231,17 +234,22 @@ while True:
         break
 
     # Get map point corresponding to current event
+    # print(Rot)
+    # print(rot0)
+    # print(bearing_vec)
+    # exit()
+
     rotated_vec = rot0.T.dot(Rot).dot(bearing_vec)
     pm = coordinate_transforms.project_equirectangular_projection(rotated_vec, output_width, output_height)
 
     #  Get map point corresponding to previous event at same pixel
     rotated_vec_prev = np.zeros(rotated_vec.shape)
     for ii in range(num_events_batch):
-        Rot_prev = event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'].copy()
+        Rot_prev = event_map[y_events_batch.iloc[ii]][x_events_batch.iloc[ii]]['rotation'].copy()
         rotated_vec_prev[:, ii] = rot0.T.dot(Rot_prev).dot(bearing_vec[:, ii])
         # Update last rotation and time of event(SAE)
-        event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['sae'] = t_events_batch.iloc[ii]
-        event_map[x_events_batch.iloc[ii]][y_events_batch.iloc[ii]]['rotation'] = Rot
+        event_map[y_events_batch.iloc[ii]][x_events_batch.iloc[ii]]['sae'] = t_events_batch.iloc[ii]
+        event_map[y_events_batch.iloc[ii]][x_events_batch.iloc[ii]]['rotation'] = Rot
 
     pm_prev = coordinate_transforms.project_equirectangular_projection(rotated_vec_prev, output_width, output_height)
 
@@ -293,6 +301,7 @@ while True:
     if measurement_criterion == 'contrast':
         # Use contrast as measurement function
         dhdg = vel.T * np.array([tc * pol_events_batch, tc * pol_events_batch]).T # derivative of measurement function
+
         nu_innovation = dvs_parameters['contrast_threshold'] - np.sum(dhdg * gm, axis=1)
     else:
         # Use the event rate as measurement function
@@ -426,7 +435,7 @@ mask = trace_map > 0.05  # % reconstruct only gradients with small covariance
 grad_map_clip['x'][mask] = 0
 grad_map_clip['x'][mask] = 0
 rec_image = integration_methods.frankotchellappa(grad_map_clip['x'], grad_map_clip['y']);
-rec_image = rec_image - np.mean(rec_image)
+rec_image = -rec_image + np.mean(rec_image)
 
 rec_image_normalized = rec_image / np.max(np.abs(rec_image))
 fig_normalized = plt.figure(1)

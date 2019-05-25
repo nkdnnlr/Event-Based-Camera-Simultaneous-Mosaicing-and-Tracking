@@ -1,9 +1,0 @@
-Datestring: 04052019T143309
-experiment: find_optimal_parameters
-num_particles: 200
-num_events: 251
-num_events_per_batch: 30
-sigma1: 0.06732797526636854
-sigma2: 0.06732820368652169
-sigma3: 1.0571569501475258
-seconds_passed: 29
