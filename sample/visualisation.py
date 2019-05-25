@@ -359,7 +359,7 @@ if __name__ == '__main__':
 
     filename_groundtruth = 'poses.txt'
     filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
-    filename_ours = 'quaternions_22052019T153630_verynice.txt'
+    filename_ours = 'quaternions_23052019T215921.txt'
 
     # filename_likelihoodTrue = 'quaternions_14052019T091627_50deg_True_1000particles.txt'
     # filename_likelihoodTruessmall = 'quaternions_13052019T191609_20deg_True_sx0p0002.txt'

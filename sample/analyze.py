@@ -57,7 +57,7 @@ if __name__ == '__main__':
     filename_groundtruth = 'poses.txt'
     directory_output = '../output/evaluation'
     filename_onlymotionupdate = 'quaternions_11052019T150554_onlymotionupdate.txt'
-    filename_ours = 'quaternions_22052019T153630_verynice.txt'
+    filename_ours = 'quaternions_23052019T215921.txt'
     filename_output = os.path.join(directory_output, filename_ours[:-4] + '.png')
 
     poses_groundtruth = helpers.load_poses(filename_poses=os.path.join(directory_poses, filename_groundtruth),
