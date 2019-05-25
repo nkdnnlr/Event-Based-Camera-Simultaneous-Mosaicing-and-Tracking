@@ -13,6 +13,10 @@ import math
 import sys
 
 from mpl_toolkits.mplot3d import Axes3D
+# import plotly
+# import plotly.plotly as py
+# import plotly.graph_objs as go
+# plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
 from sys import platform as sys_pf
 import matplotlib
 matplotlib.use("TkAgg")
@@ -21,15 +25,15 @@ import matplotlib.pyplot as plt
 import sample.helpers as helpers
 
 data_dir = '../data/synth1'
-intensity_map = np.load('../output/intensity_map2.npy')
+intensity_map = np.load('../output/intensity_map.npy')
 event_file = os.path.join(data_dir, 'events.txt')
 filename_poses = os.path.join(data_dir, 'poses.txt')
 outputdir_poses = '../output/poses/'
 
 # Constants
-degrees_rot = 5
+degrees_rot = 180
 eventlikelihood_comparison_flipped = True
-num_particles = 500
+num_particles = 2000
 num_events_batch = 100
 sigma_init1 = 0. #0.0001
 sigma_init2 = 0. #0.0001
