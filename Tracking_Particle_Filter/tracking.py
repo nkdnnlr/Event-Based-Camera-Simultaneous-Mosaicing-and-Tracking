@@ -25,13 +25,13 @@ import matplotlib.pyplot as plt
 import sample.helpers as helpers
 
 data_dir = '../data/synth1'
-intensity_map = np.load('../output/intensity_map2.npy')
+intensity_map = np.load('../output/intensity_map.npy')
 event_file = os.path.join(data_dir, 'events.txt')
 filename_poses = os.path.join(data_dir, 'poses.txt')
 outputdir_poses = '../output/poses/'
 
 # Constants
-degrees_rot = 30
+degrees_rot = 180
 eventlikelihood_comparison_flipped = True
 num_particles = 2000
 num_events_batch = 100
