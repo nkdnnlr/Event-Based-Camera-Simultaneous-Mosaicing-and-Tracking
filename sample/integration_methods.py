@@ -2,7 +2,7 @@ import numpy as np
 
 def frankotchellappa(dzdx, dzdy):
     """
-    % Frankt-Chellappa Algrotihm
+    % Frankt-Chellappa Algorithm
     % Input gx and gy
     % Output : reconstruction
     % Author: Amit Agrawal, 2005
@@ -59,3 +59,54 @@ def frankotchellappa(dzdx, dzdy):
     # print(z.shape)
     # exit()
     return z
+
+if __name__ == '__main__':
+    import os
+    import pickle
+
+    import pandas as pd
+
+    import matplotlib.pyplot as plt
+
+    output_dir = '../output/ourdataset/test'
+
+    pickle_in = open("grad_map_clip.pickle", "rb")
+    grad_map_clip = pickle.load(pickle_in)
+
+    # print(grad_map_clip['x'][:, 1750:2000].shape)
+    # exit()
+
+
+
+    rec_image = frankotchellappa(grad_map_clip['x'][400:700, 1750:2000],
+                                 grad_map_clip['y'][400:700, 1750:2000]);
+    rec_image = frankotchellappa(grad_map_clip['x'],
+                                 grad_map_clip['y']);
+    rec_image = rec_image - np.mean(rec_image)
+
+    rec_image_normalized = rec_image / np.max(np.abs(rec_image))
+    fig_normalized = plt.figure(1)
+    plt.imshow(rec_image_normalized, cmap=plt.cm.binary)
+    plt.title("Reconstructed image (log)")
+    plt.savefig(os.path.join(output_dir, "reconstructed_log.png"))
+    plt.show()
+    #
+    rec_image_exp = np.exp(0.001 + rec_image)
+    fig_normalized_linear = plt.figure(2)
+    plt.imshow(rec_image_exp, cmap=plt.cm.binary)
+    plt.title("Reconstructed image (linear)")
+    plt.savefig(os.path.join(output_dir, "reconstructed_linear.png"))
+    plt.show()
+
+    fig_gradientx = plt.figure(3)
+    h_gx = plt.imshow(grad_map_clip['x'] / np.std(grad_map_clip['x']), cmap=plt.cm.binary, vmin=-5, vmax=5)
+    plt.title("Gradient in X")
+    plt.savefig(os.path.join(output_dir, "gradient_x.png"))
+    plt.show()
+
+    fig_gradienty = plt.figure(4)
+    h_gx = plt.imshow(grad_map_clip['y'] / np.std(grad_map_clip['y']), cmap=plt.cm.binary, vmin=-5, vmax=5)
+    plt.title("Gradient in Y")
+    plt.savefig(os.path.join(output_dir, "gradient_y.png"))
+    plt.show()
+

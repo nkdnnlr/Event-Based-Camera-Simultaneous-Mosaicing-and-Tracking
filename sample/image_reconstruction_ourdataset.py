@@ -33,10 +33,10 @@ import sample.helpers as helpers
 
 ## Run settings:
 num_events_batch = 300
-num_events_display = 60000
+num_events_display = 600000
 scale_res = 1 # Use Zweierpotenz
 plot_events_animation = False #True
-plot_events_pm_animation = False
+plot_events_pm_animation = False #True
 
 # Methods used:
 # 1) Select measurement function used for brightness gradient estimation
@@ -50,7 +50,8 @@ measurement_criterion = 'contrast'
 
 time_0 = time.time()
 # Data directories
-data_dir = '../data/Datasets/BigRoom/2019-04-29-17-20-59'
+data_dir = '../data/Datasets/FPU/Regal_z'
+# data_dir = '../data/Datasets/BigRoom/2019-04-29-17-20-59'
 calibration_dir = '../data/calibration'
 output_dir = '../output/ourdataset'
 images_dir = os.path.join(output_dir, '{0}pbatch_{1}'.format(num_events_batch, measurement_criterion))
@@ -60,7 +61,7 @@ if not os.path.exists(images_dir):
 
 
 # Calibration data
-dvs_calibration = io.loadmat(os.path.join(calibration_dir, 'DVS_synth_undistorted_pixels_ours_all.mat'))
+dvs_calibration = io.loadmat(os.path.join(calibration_dir, 'DVS_synth_undistorted_pixels_ours_FPU.mat'))
 # Dictionary with entries ['__header__', '__version__', '__globals__',
 #                          'Kint', 'dist_coeffs', 'image_height', 'image_width',
 #                          'pixels_grid', 'undist_pix', 'undist_pix_calibrated',
@@ -101,6 +102,7 @@ events = pd.read_csv(filename_events, delimiter=' ',
 num_events = events.size
 print("Number of events in file: ", num_events)
 first_event = events.loc[0, 'time']
+print(first_event)
 events['t'] = events['time'] - first_event
 events = events[['t', 'x', 'y', 'pol']]
 
@@ -122,8 +124,9 @@ print("Number of poses in file: ", num_poses)
 print("Head: \n", poses.head(10))
 print("Tail: \n", poses.tail(10))
 
+# exit()
 # Convert quaternions to rotation matrices and save in a dictionary TODO: UGLY AS HELL!!
-rotmats_dict = coordinate_transforms.angvel2R_dict(poses)
+rotmats_dict = coordinate_transforms.angvel2R_dict(poses) # TODO: Not tested, but seems reasonable
 # print(rotmats_dict)
 # exit()
 
@@ -149,7 +152,7 @@ grad_map = {}
 grad_map['x'] = np.zeros((output_height, output_width))
 grad_map['y'] = np.zeros((output_height, output_width))
 # % Covariance matrix of each gradient pixel
-grad_initial_variance = 10
+grad_initial_variance = 50
 grad_map_covar = {}
 grad_map_covar['xx'] = np.ones((output_height, output_width)) * grad_initial_variance
 grad_map_covar['xy'] = np.zeros((output_height, output_width))
@@ -418,13 +421,14 @@ while True:
                 h_map_pts_p.set_data(pm[0, idx_pos], pm[1, idx_pos])
                 h_map_pts_n.set_data(pm[0, idx_neg], pm[1, idx_neg])
                 plt.savefig(output_dir + '/animation/events_pm/' + "fig_events_{}.png".format(str(iEv).zfill(10)))
+
             # maximum = np.max(np.abs(rec_image))
             # minimum = np.min(np.abs(rec_image))
             # h_img.set_data(rec_image / maximum)
 
             # h_gx.set_data(grad_map['x'] / np.std(grad_map['x']))
             # ax_events.relim()
-            plt.pause(0.01)
+
 
 endtime = time.time()
 print("Done")
@@ -437,12 +441,42 @@ idx_pos = pol_events_batch > 0
 idx_neg = pol_events_batch < 0
 
 trace_map = grad_map_covar['xx'] + grad_map_covar['yy']
+
+
+import pickle
+pickle_out = open("grad_map.pickle","wb")
+pickle.dump(grad_map, pickle_out)
+pickle_out.close()
+
+pickle_out = open("trace_map.pickle","wb")
+pickle.dump(trace_map, pickle_out)
+pickle_out.close()
+
+
+
+
 grad_map_clip = {}
 grad_map_clip['x'] = grad_map['x']
 grad_map_clip['y'] = grad_map['y']
-mask = trace_map > 0.01  # % reconstruct only gradients with small covariance
+mask = trace_map > 0.05  # % reconstruct only gradients with small covariance
+
+
 grad_map_clip['x'][mask] = 0
-grad_map_clip['x'][mask] = 0
+grad_map_clip['y'][mask] = 0
+
+
+
+
+# grad_map_clip.to_csv('grad_map_clip.csv')
+#
+# grad_map_clip['x'] = grad_map_clip['x'].loc[1750:2000]
+# grad_map_clip['y'] = grad_map_clip['y'].loc[400:700]
+
+
+
+
+
+
 rec_image = integration_methods.frankotchellappa(grad_map_clip['x'], grad_map_clip['y']);
 rec_image = rec_image - np.mean(rec_image)
 
@@ -450,32 +484,32 @@ rec_image_normalized = rec_image / np.max(np.abs(rec_image))
 fig_normalized = plt.figure(1)
 plt.imshow(rec_image_normalized, cmap=plt.cm.binary)
 plt.title("Reconstructed image (log)")
-plt.savefig(os.path.join(images_dir, "reconstructed_log.png"))
+plt.savefig(os.path.join(images_dir, "reconstructed_log.pdf"), dpi=350)
 plt.show()
 #
 rec_image_exp = np.exp(0.001 + rec_image)
 fig_normalized_linear = plt.figure(2)
 plt.imshow(rec_image_exp, cmap=plt.cm.binary)
 plt.title("Reconstructed image (linear)")
-plt.savefig(os.path.join(images_dir, "reconstructed_linear.png"))
+plt.savefig(os.path.join(images_dir, "reconstructed_linear.pdf"), dpi=350)
 plt.show()
 
 fig_gradientx = plt.figure(3)
 h_gx = plt.imshow(grad_map['x'] / np.std(grad_map['x']), cmap=plt.cm.binary, vmin=-5, vmax=5)
 plt.title("Gradient in X")
-plt.savefig(os.path.join(images_dir, "gradient_x.png"))
+plt.savefig(os.path.join(images_dir, "gradient_x.pdf"), dpi=350)
 plt.show()
 
 fig_gradienty = plt.figure(4)
 h_gx = plt.imshow(grad_map['y'] / np.std(grad_map['y']), cmap=plt.cm.binary, vmin=-5, vmax=5)
 plt.title("Gradient in Y")
-plt.savefig(os.path.join(images_dir, "gradient_y.png"))
+plt.savefig(os.path.join(images_dir, "gradient_y.pdf"), dpi=350)
 plt.show()
 
 fig_tracemap = plt.figure(5)
 h_gx = plt.imshow(trace_map/np.max(trace_map), cmap=plt.cm.binary, vmin=0, vmax=1)
 plt.title("Trace of Covariance")
-plt.savefig(os.path.join(images_dir, "trace.png"))
+plt.savefig(os.path.join(images_dir, "trace.pdf"), dpi=350)
 plt.show()
 
 # g_ang = -1*np.arctan2(grad_map['y'], grad_map['x'])
