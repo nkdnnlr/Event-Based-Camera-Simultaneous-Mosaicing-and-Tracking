@@ -10,16 +10,14 @@ def get_first_matrix(filename_poses):
     """
     gets first matrix from poses file
     :param filename_poses: filename of poses
-    :return:
+    :return: return first matrix as np array
     """
     poses = pd.read_csv(filename_poses, delimiter=' ', header=None, names=['sec', 'nsec', 'x', 'y', 'z', 'qx', 'qy', 'qz', 'qw'])
     num_poses = poses.size
-    # print("Number of poses in file: ", num_poses)
 
     poses['t'] = poses['sec'] + 1e-9*(poses['nsec']) #time_ctrl in MATLAB
     poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
-    # print("Head: \n", poses.head(10))
-    # print("Tail: \n", poses.tail(10))
+
 
     first_matrix = coordinate_transforms.q2R((poses.loc[0, 'qw'], poses.loc[0, 'qx'],
          poses.loc[0, 'qy'], poses.loc[0, 'qz']))
@@ -29,7 +27,7 @@ def load_poses(filename_poses, includes_translations=False):
     """
     gets poses from poses file
     :param filename_poses: filename of poses
-    :return:
+    :return: data frame with poses
     """
 
     if includes_translations:
@@ -46,9 +44,9 @@ def load_poses(filename_poses, includes_translations=False):
 
 def load_poses_angvel(filename_poses, includes_translations=True):
     """
-    gets poses from poses file
+    gets poses from poses file, includes angular velocities in all directions
     :param filename_poses: filename of poses
-    :return:
+    :return: data frame with poses
     """
 
     if includes_translations:
@@ -131,6 +129,10 @@ def generate_event(t=0, x=128/2, y=128/2, pol=1, corner=None):
 
 
 def generate_events():
+    '''
+
+    :return: generate data frame with generated events
+    '''
     cols = ['t', 'x', 'y', 'pol']
     list_of_series = [generate_event(corner=i) for i in range(5)]
     events = pd.DataFrame(list_of_series, columns=cols)
@@ -178,9 +180,9 @@ def rotmat2eulerangles_df(df):
 
 def get_sigmas(eulerangles, all_events=3564657, batch_size=300, factor=1):
     """
-
+    calculates the standard deviation of the motion update
     :param eulerangles:
-    :return:
+    :return: sigma1,sigma2,sigma3
     """
     print(eulerangles.diff().head(10))
     print(eulerangles.diff().abs().head(10))
@@ -237,9 +239,9 @@ def rot2quaternions(allrotations):
 def quaternions2file(quaternions, directory):
     """
 
-    :param quaternions:
-    :param directory:
-    :return:
+    :param quaternions: data frame with quaternion
+    :param directory: path
+    :return: datestring
     """
     # Saves quaternions as csv
     # Gets datestring
@@ -256,7 +258,7 @@ def write_logfile(datestring, directory, **kwargs):
     Writes logfile from metadata
     :param datestring:
     :param kwargs: dictionary with metadata, such as num_events, num_batches, etc.
-    :return:
+    :return: logfile
     """
     filename = 'quaternions_' + datestring + '.log'
     filename = os.path.join(directory, filename)
@@ -303,25 +305,25 @@ if __name__ == '__main__':
     # print(type(all_events))
     print(all_events)
     exit()
-    # first_matrix = get_first_matrix(filename_poses)
-    # print(first_matrix)
-    # print(all_events)
-
-    # write_logfile('abcdefg',  a=23, b='hello', aa='oops')
-    poses = load_poses(filename_poses, includes_translations=True)
-    rotmats = coordinate_transforms.q2R_df(poses)
-    print(rotmats.loc[0]['Rotation'])
-
-
-    eulerangles = rotmat2eulerangles_df(rotmats)
-
-    # print(eulerangles.head(10))
-    print(eulerangles.describe())
-    sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles, factor=1)
-    print("sigmas")
-    print(sigma_1)
-    print(sigma_2)
-    print(sigma_3)
+    # # first_matrix = get_first_matrix(filename_poses)
+    # # print(first_matrix)
+    # # print(all_events)
+    #
+    # # write_logfile('abcdefg',  a=23, b='hello', aa='oops')
+    # poses = load_poses(filename_poses, includes_translations=True)
+    # rotmats = coordinate_transforms.q2R_df(poses)
+    # print(rotmats.loc[0]['Rotation'])
+    #
+    #
+    # eulerangles = rotmat2eulerangles_df(rotmats)
+    #
+    # # print(eulerangles.head(10))
+    # print(eulerangles.describe())
+    # sigma_1, sigma_2, sigma_3 = get_sigmas(eulerangles, factor=1)
+    # print("sigmas")
+    # print(sigma_1)
+    # print(sigma_2)
+    # print(sigma_3)
 
 
 

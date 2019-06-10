@@ -267,7 +267,7 @@ def rotation_interpolation(t, rotmats_dict, t_query):
         d_t = (t_query - t_0) / (t_1 - t_0)
 
         # Linear interpolation, Lie group formulation
-        axang_increm =np.array(r2aa((rot_0.T).dot(rot_1)))  #TODO: is a little bit different than MATLABS, but only on the 4th digit
+        axang_increm =np.array(r2aa((rot_0.T).dot(rot_1)))
         axang_increm[3] *= d_t
         rot_interp = rot_0.dot(aa2r(np.array(axang_increm)))
         return rot_interp
@@ -275,7 +275,6 @@ def rotation_interpolation(t, rotmats_dict, t_query):
 
 def project_equirectangular_projection(point_3d, output_width, output_height):
     """
-    Tested
     Project a 3D point according to equirectangular model
     Used for 360 degrees panoramic cameras that output a full panorama frame
     :param point_3d: a 3D point

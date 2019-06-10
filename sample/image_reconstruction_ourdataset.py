@@ -3,8 +3,8 @@
 # Given DVS events and camera poses (rotational motion), reconstruct the
 # gradient map that caused the events.
 #
-# Céline Nauer, Institute of Neuroinformatics, University of Zurich
-# Joël Bachmann, ETH
+# Celine Nauer, Institute of Neuroinformatics, University of Zurich
+# Joel Bachmann, ETH
 # Nik Dennler, Institute of Neuroinformatics, University of Zurich
 #
 # Original MATLAB code by
@@ -22,8 +22,8 @@ import pandas as pd
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-import pyquaternion
-import pylab
+# import pyquaternion
+# import pylab
 
 # Provide function handles to convert from rotation matrix to axis-angle and vice-versa
 import sample.integration_methods as integration_methods
@@ -32,11 +32,13 @@ import sample.helpers as helpers
 
 
 ## Run settings:
-num_events_batch = 300
+num_events_batch = 600
 num_events_display = 60000
 scale_res = 1 # Use Zweierpotenz
 plot_events_animation = False #True
 plot_events_pm_animation = False
+rec_lowerbound = 4341684
+rec_upperbound = 5427105
 
 # Methods used:
 # 1) Select measurement function used for brightness gradient estimation
@@ -103,9 +105,13 @@ print("Number of events in file: ", num_events)
 first_event = events.loc[0, 'time']
 events['t'] = events['time'] - first_event
 events = events[['t', 'x', 'y', 'pol']]
+# events = events.loc[rec_lowerbound:rec_upperbound]
+# events = events.reset_index(drop=True)
 
-print("Head: \n", events.head(10))
-print("Tail: \n", events.tail(10))
+
+print(events.describe())
+# print("Head: \n", events.head(10))
+# print("Tail: \n", events.tail(10))
 
 ##Loading Camera poses
 print("Loading Camera Orientations")
@@ -119,6 +125,14 @@ print("Number of poses in file: ", num_poses)
 # print(first_event)
 # poses['t'] = poses['time'] - poses['time'].loc[0]
 # poses = poses[['t', 'qw', 'qx', 'qy', 'qz']] # Quaternions
+
+# t_max = events['t'].max()
+# t_min = events['t'].min()
+# poses = poses[poses['t'] < t_max]
+# poses = poses[poses['t'] > t_min]
+# poses = poses.reset_index(drop=True)
+
+
 print("Head: \n", poses.head(10))
 print("Tail: \n", poses.tail(10))
 
@@ -248,6 +262,10 @@ while True:
     # print(rot0)
     # print(bearing_vec)
     # exit()
+    print(rot0)
+    print(Rot)
+    print(bearing_vec)
+    exit()
     rotated_vec = rot0.T.dot(Rot).dot(bearing_vec)
     pm = coordinate_transforms.project_equirectangular_projection(rotated_vec, output_width, output_height)
 
@@ -443,7 +461,8 @@ grad_map_clip['y'] = grad_map['y']
 mask = trace_map > 0.01  # % reconstruct only gradients with small covariance
 grad_map_clip['x'][mask] = 0
 grad_map_clip['x'][mask] = 0
-rec_image = integration_methods.frankotchellappa(grad_map_clip['x'], grad_map_clip['y']);
+np.save('grad_map_clip')
+rec_image = integration_methods.frankotchellappa(grad_map_clip['x'], grad_map_clip['y'])
 rec_image = rec_image - np.mean(rec_image)
 
 rec_image_normalized = rec_image / np.max(np.abs(rec_image))
