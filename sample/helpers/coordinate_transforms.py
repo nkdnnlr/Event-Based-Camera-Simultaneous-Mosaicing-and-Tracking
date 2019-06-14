@@ -14,7 +14,7 @@ def r2aa(R):
     """
 
     # Check that input is a rotation matrix
-    assert (R.shape == (3,3)) & (R.size == 9), "Input must be a 3x3 matrix"
+    assert (R.shape == (3, 3)) & (R.size == 9), "Input must be a 3x3 matrix"
     # assert np.linalg.norm(R.transpose @ R - np.identity(3), 'fro') < 1e-7, 'Input must be a 3D rotation matrix' TODO: removed warning!
     assert np.linalg.det(R) > 0, "Input must be a 3D rotation matrix"
 
@@ -32,8 +32,10 @@ def r2aa(R):
         ax = U[:, 0].transpose()
 
         # Adjust the sign of the axis
-        if np.linalg.norm(aa2r([ax, theta]) - R, 'fro') > np.linalg.norm(aa2r([-ax, theta]) - R, 'fro'):
-            ax = - ax
+        if np.linalg.norm(aa2r([ax, theta]) - R, "fro") > np.linalg.norm(
+            aa2r([-ax, theta]) - R, "fro"
+        ):
+            ax = -ax
 
     else:
         # Most rotations obtain the axis from the linear term in [u]_x in Rodrigues formula
@@ -62,7 +64,9 @@ def aa2r(AA):
     :param AA: 1x4 axis angle rotation.
     :return: R: a 3x3 rotation matrix
     """
-    assert AA.shape == (4,), 'Input must be 1x4 or 4x1'  ##TODO: this might cause errors, check MATLAB
+    assert AA.shape == (
+        4,
+    ), "Input must be 1x4 or 4x1"  ##TODO: this might cause errors, check MATLAB
 
     # Axis
     norm_ax = np.linalg.norm(AA[0:3])
@@ -72,9 +76,7 @@ def aa2r(AA):
     ax = AA[0:3] / norm_ax  # Unit norm, avoid division by zero
 
     # Cross - product matrix
-    omega = np.array([[0, -ax[2], ax[1]],
-              [ax[2], 0, -ax[0]],
-              [-ax[1], ax[0], 0]])
+    omega = np.array([[0, -ax[2], ax[1]], [ax[2], 0, -ax[0]], [-ax[1], ax[0], 0]])
 
     # Rotation angle
     theta = AA[3]
@@ -94,30 +96,30 @@ def q2R(q):
     """
 
     R = np.zeros((3, 3))
-    R[0, 0] = 1. - 2. * (q[2]**2. + q[3]**2.)
-    R[0, 1] = 2. * (q[1] * q[2] - q[3] * q[0])
-    R[0, 2] = 2. * (q[1] * q[3] + q[2] * q[0])
+    R[0, 0] = 1.0 - 2.0 * (q[2] ** 2.0 + q[3] ** 2.0)
+    R[0, 1] = 2.0 * (q[1] * q[2] - q[3] * q[0])
+    R[0, 2] = 2.0 * (q[1] * q[3] + q[2] * q[0])
 
-    R[1, 0] = 2. * (q[1] * q[2] + q[3] * q[0])
-    R[1, 1] = 1. - 2. * (q[1]**2. + q[3]**2.)
-    R[1, 2] = 2. * (q[2] * q[3] - q[1] * q[0])
+    R[1, 0] = 2.0 * (q[1] * q[2] + q[3] * q[0])
+    R[1, 1] = 1.0 - 2.0 * (q[1] ** 2.0 + q[3] ** 2.0)
+    R[1, 2] = 2.0 * (q[2] * q[3] - q[1] * q[0])
 
-    R[2, 0] = 2. * (q[1] * q[3] - q[2] * q[0])
-    R[2, 1] = 2. * (q[2] * q[3] + q[1] * q[0])
-    R[2, 2] = 1. - 2. * (q[1]**2. + q[2]**2.)
+    R[2, 0] = 2.0 * (q[1] * q[3] - q[2] * q[0])
+    R[2, 1] = 2.0 * (q[2] * q[3] + q[1] * q[0])
+    R[2, 2] = 1.0 - 2.0 * (q[1] ** 2.0 + q[2] ** 2.0)
 
     # print("q: ", q)
     # print("R: \n", R)
     # print("R: \n", R[1,0])
-
 
     # Numerically improve result by projecting on the space of rotation matrices
     # print(np.linalg.svd(R))
 
     u, s, v_T = np.linalg.svd(R, full_matrices=True)
     v = v_T.T
-    R = u.dot(np.diag(np.array([1., 1., np.linalg.det(u.dot(v_T))]))).dot(v_T)
+    R = u.dot(np.diag(np.array([1.0, 1.0, np.linalg.det(u.dot(v_T))]))).dot(v_T)
     return R
+
 
 def angvel2R_dict(df):
     """
@@ -125,7 +127,7 @@ def angvel2R_dict(df):
     :param df: Dataframe with poses including the columns 't', 'wx', 'wy', 'wz'
     :return:
     """
-    rotmats = {df.loc[0, 't']: np.eye(3)}
+    rotmats = {df.loc[0, "t"]: np.eye(3)}
 
     G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
     G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
@@ -135,20 +137,19 @@ def angvel2R_dict(df):
     dy = 0
     dz = 0
 
-
     for idx, row in df.iloc[1:].copy().iterrows():
-        dt = df.loc[idx, 't'] - df.loc[idx-1, 't']
-        wx = (df.loc[idx-1, 'wx'] + df.loc[idx, 'wx'])/2.
-        wy = (df.loc[idx-1, 'wy'] + df.loc[idx, 'wy'])/2.
-        wz = (df.loc[idx-1, 'wz'] + df.loc[idx, 'wz'])/2.
+        dt = df.loc[idx, "t"] - df.loc[idx - 1, "t"]
+        wx = (df.loc[idx - 1, "wx"] + df.loc[idx, "wx"]) / 2.0
+        wy = (df.loc[idx - 1, "wy"] + df.loc[idx, "wy"]) / 2.0
+        wz = (df.loc[idx - 1, "wz"] + df.loc[idx, "wz"]) / 2.0
 
         dx += dt * wx
         dy += dt * wy
         dz += dt * wz
 
-        rotmats[df.loc[idx, 't']] = sp.expm(np.dot(dx, G1) +
-                                            np.dot(dy, G2) +
-                                            np.dot(dz, G3))
+        rotmats[df.loc[idx, "t"]] = sp.expm(
+            np.dot(dx, G1) + np.dot(dy, G2) + np.dot(dz, G3)
+        )
 
     return rotmats
 
@@ -160,7 +161,7 @@ def angvel2R_df(df):
     :return:
     """
 
-    rotmats =pd.DataFrame(columns=['t', 'Rotation'])
+    rotmats = pd.DataFrame(columns=["t", "Rotation"])
     # rotmats.loc[0, 'Rotation'] = 0*np.eye(3)
 
     G3 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
@@ -171,26 +172,25 @@ def angvel2R_df(df):
     dy = 0
     dz = 0
 
-    rotmats.loc[0, 'Rotation'] = sp.expm(np.dot(dx, G1) +
-                                         np.dot(dy, G2) +
-                                         np.dot(dz, G3))
+    rotmats.loc[0, "Rotation"] = sp.expm(
+        np.dot(dx, G1) + np.dot(dy, G2) + np.dot(dz, G3)
+    )
 
     for idx, row in df.iloc[1:].copy().iterrows():
-        dt = df.loc[idx, 't'] - df.loc[idx - 1, 't']
-        wx = (df.loc[idx - 1, 'wx'] + df.loc[idx, 'wx']) / 2.
-        wy = (df.loc[idx - 1, 'wy'] + df.loc[idx, 'wy']) / 2.
-        wz = (df.loc[idx - 1, 'wz'] + df.loc[idx, 'wz']) / 2.
+        dt = df.loc[idx, "t"] - df.loc[idx - 1, "t"]
+        wx = (df.loc[idx - 1, "wx"] + df.loc[idx, "wx"]) / 2.0
+        wy = (df.loc[idx - 1, "wy"] + df.loc[idx, "wy"]) / 2.0
+        wz = (df.loc[idx - 1, "wz"] + df.loc[idx, "wz"]) / 2.0
 
         dx += dt * wx
         dy += dt * wy
         dz += dt * wz
 
+        rotmats.loc[idx, "Rotation"] = sp.expm(
+            np.dot(dx, G1) + np.dot(dy, G2) + np.dot(dz, G3)
+        )
 
-        rotmats.loc[idx, 'Rotation'] = sp.expm(np.dot(dx, G1) +
-                                               np.dot(dy, G2) +
-                                               np.dot(dz, G3))
-
-    rotmats['t'] = df['t']
+    rotmats["t"] = df["t"]
 
     return rotmats
 
@@ -209,7 +209,7 @@ def q2euler(qw, qx, qy, qz):
     # pitch(y - axis rotation)
     sinp = 2.0 * (qw * qy - qz * qx)
     if np.abs(sinp) >= 1:
-        pitch = np.copysign(np.pi / 2, sinp) # use 90 degrees if out of range
+        pitch = np.copysign(np.pi / 2, sinp)  # use 90 degrees if out of range
     else:
         pitch = np.arcsin(sinp)
 
@@ -234,6 +234,7 @@ def q2roll(qw, qx, qy, qz):
 
     return roll
 
+
 def q2pitch(qw, qx, qy, qz):
     """
     Converts quaternions to Euler angles roll pitch yaw
@@ -243,7 +244,7 @@ def q2pitch(qw, qx, qy, qz):
     # pitch(y - axis rotation)
     sinp = 2.0 * (qw * qy - qz * qx)
     if np.abs(sinp) >= 1:
-        pitch = np.copysign(np.pi / 2, sinp) # use 90 degrees if out of range
+        pitch = np.copysign(np.pi / 2, sinp)  # use 90 degrees if out of range
     else:
         pitch = np.arcsin(sinp)
 
@@ -264,8 +265,6 @@ def q2yaw(qw, qx, qy, qz):
     return yaw
 
 
-
-
 def q2R_dict(df):
     """
     Transforms quaternions vector q to rotation matrix R
@@ -275,9 +274,11 @@ def q2R_dict(df):
     # df['rotmats_ctrl'] = np.zeros((3,3))
     rotmats = {}
     for idx, row in df.copy().iterrows():
-        rotmats[df.loc[idx, 't']] = q2R((df.loc[idx, 'qw'], df.loc[idx, 'qx'],
-                                          df.loc[idx, 'qy'], df.loc[idx, 'qz']))
+        rotmats[df.loc[idx, "t"]] = q2R(
+            (df.loc[idx, "qw"], df.loc[idx, "qx"], df.loc[idx, "qy"], df.loc[idx, "qz"])
+        )
     return rotmats
+
 
 def q2R_df(df):
     """
@@ -286,14 +287,13 @@ def q2R_df(df):
     :return:
     """
     # df['rotmats_ctrl'] = np.zeros((3,3))
-    rotmats =pd.DataFrame(columns=['t', 'Rotation'])
+    rotmats = pd.DataFrame(columns=["t", "Rotation"])
 
     for idx, row in df.copy().iterrows():
 
-        rotmats.loc[idx, 'Rotation'] = (q2R([row['qw'], row['qx'],
-                                          row['qy'], row['qz']]))
+        rotmats.loc[idx, "Rotation"] = q2R([row["qw"], row["qx"], row["qy"], row["qz"]])
 
-    rotmats['t'] = df['t']
+    rotmats["t"] = df["t"]
     return rotmats
     # print(rotmats2.head(), rotmats2.count())
 
@@ -312,14 +312,14 @@ def rotation_interpolation(t, rotmats_dict, t_query):
     rotmats_lastkey = list(rotmats_dict.keys())[-1]
 
     # Rotation interpolation
-    if (t_query < t.iloc[0]  or t_query > t.iloc[-1]):
+    if t_query < t.iloc[0] or t_query > t.iloc[-1]:
         rot_interp = np.NaN * rotmats_dict[rotmats_1stkey]
 
     elif t_query == t.iloc[-1]:
         rot_interp = rotmats_dict[rotmats_lastkey]
 
     else:
-        idx_0 = t.loc[t <= t_query].index.max() #Take maximal index where t <= t_query
+        idx_0 = t.loc[t <= t_query].index.max()  # Take maximal index where t <= t_query
         # print(idx_0)
 
         # Two rotations and their times
@@ -336,7 +336,7 @@ def rotation_interpolation(t, rotmats_dict, t_query):
         d_t = (t_query - t_0) / (t_1 - t_0)
 
         # Linear interpolation, Lie group formulation
-        axang_increm =np.array(r2aa((rot_0.T).dot(rot_1)))
+        axang_increm = np.array(r2aa((rot_0.T).dot(rot_1)))
         axang_increm[3] *= d_t
         rot_interp = rot_0.dot(aa2r(np.array(axang_increm)))
         return rot_interp
@@ -351,7 +351,7 @@ def project_equirectangular_projection(point_3d, output_width, output_height):
     :param output_height: height of the panorama
     :return: point_2d: projected point (coordinates in the panorama image)
     """
-    rho = np.sqrt(sum(np.square(point_3d))) # norm of each 3D point
+    rho = np.sqrt(sum(np.square(point_3d)))  # norm of each 3D point
     # print(rho.shape)
 
     fx = output_width / (2.0 * np.pi)
@@ -366,7 +366,6 @@ def project_equirectangular_projection(point_3d, output_width, output_height):
     point_2d[0, :] = point_2d[0, :] + principal_point[0]
     point_2d[1, :] = point_2d[1, :] + principal_point[1]
     return point_2d
-
 
 
 # # Testing... TODO: Write proper test functions

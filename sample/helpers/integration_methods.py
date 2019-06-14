@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def frankotchellappa(dzdx, dzdy):
     """
     % Frankt-Chellappa Algorithm
@@ -29,14 +30,16 @@ def frankotchellappa(dzdx, dzdy):
 
     rows, cols = np.array(dzdx).shape
 
-    wx, wy = np.meshgrid(np.arange(-np.pi / 2, np.pi / 2, np.pi / (cols )),
-                         np.arange(-np.pi / 2, np.pi / 2, np.pi / (rows )))
+    wx, wy = np.meshgrid(
+        np.arange(-np.pi / 2, np.pi / 2, np.pi / (cols)),
+        np.arange(-np.pi / 2, np.pi / 2, np.pi / (rows)),
+    )
 
     # Quadrant shift to put zero frequency at the appropriate edge
     wx = np.fft.ifftshift(wx)
     wy = np.fft.ifftshift(wy)
 
-    DZDX = np.fft.fft2(dzdx)   # Fourier transforms of gradients
+    DZDX = np.fft.fft2(dzdx)  # Fourier transforms of gradients
     DZDY = np.fft.fft2(dzdy)
 
     # Integrate in the frequency domain by phase shifting by pi/2 and
@@ -47,12 +50,11 @@ def frankotchellappa(dzdx, dzdy):
     j = 1j
 
     # % dd = wx.^2 + wy.^2;
-    Z = (-j * wx * DZDX -j * wy * DZDY) / (np.power(wx, 2) + np.power(wy, 2) + eps)
-
+    Z = (-j * wx * DZDX - j * wy * DZDY) / (np.power(wx, 2) + np.power(wy, 2) + eps)
 
     z = np.real(np.fft.ifft2(Z))  # Reconstruction
     z = z - np.min(z)
-    z = z/2
+    z = z / 2
     # print(z[0,0])
     # print(z[100, 100])
     # print(z[554, 100])
@@ -60,7 +62,8 @@ def frankotchellappa(dzdx, dzdy):
     # exit()
     return z
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import os
     import pickle
 
@@ -68,7 +71,7 @@ if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
 
-    output_dir = '../output/ourdataset/test'
+    output_dir = "../output/ourdataset/test"
 
     pickle_in = open("grad_map_clip.pickle", "rb")
     grad_map_clip = pickle.load(pickle_in)
@@ -76,12 +79,10 @@ if __name__ == '__main__':
     # print(grad_map_clip['x'][:, 1750:2000].shape)
     # exit()
 
-
-
-    rec_image = frankotchellappa(grad_map_clip['x'][400:700, 1750:2000],
-                                 grad_map_clip['y'][400:700, 1750:2000]);
-    rec_image = frankotchellappa(grad_map_clip['x'],
-                                 grad_map_clip['y']);
+    rec_image = frankotchellappa(
+        grad_map_clip["x"][400:700, 1750:2000], grad_map_clip["y"][400:700, 1750:2000]
+    )
+    rec_image = frankotchellappa(grad_map_clip["x"], grad_map_clip["y"])
     rec_image = rec_image - np.mean(rec_image)
 
     rec_image_normalized = rec_image / np.max(np.abs(rec_image))
@@ -99,14 +100,23 @@ if __name__ == '__main__':
     plt.show()
 
     fig_gradientx = plt.figure(3)
-    h_gx = plt.imshow(grad_map_clip['x'] / np.std(grad_map_clip['x']), cmap=plt.cm.binary, vmin=-5, vmax=5)
+    h_gx = plt.imshow(
+        grad_map_clip["x"] / np.std(grad_map_clip["x"]),
+        cmap=plt.cm.binary,
+        vmin=-5,
+        vmax=5,
+    )
     plt.title("Gradient in X")
     plt.savefig(os.path.join(output_dir, "gradient_x.png"))
     plt.show()
 
     fig_gradienty = plt.figure(4)
-    h_gx = plt.imshow(grad_map_clip['y'] / np.std(grad_map_clip['y']), cmap=plt.cm.binary, vmin=-5, vmax=5)
+    h_gx = plt.imshow(
+        grad_map_clip["y"] / np.std(grad_map_clip["y"]),
+        cmap=plt.cm.binary,
+        vmin=-5,
+        vmax=5,
+    )
     plt.title("Gradient in Y")
     plt.savefig(os.path.join(output_dir, "gradient_y.png"))
     plt.show()
-
