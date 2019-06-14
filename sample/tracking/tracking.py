@@ -1,29 +1,23 @@
 import sys
 sys.path.append("..")
-
 import time
 import sys
 import math
-
 import os
 import numpy as np
 import pandas as pd
 import scipy.linalg as sp
 import math
 import sys
-
 from mpl_toolkits.mplot3d import Axes3D
-# import plotly
-# import plotly.plotly as py
-# import plotly.graph_objs as go
-# plotly.tools.set_credentials_file(username='huetufemchopf', api_key='iZv1LWlHLTCKuwM1HS4t')
 from sys import platform as sys_pf
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-# import matplotlib.animation as animation
 import sample.helpers as helpers
 
+
+# Folder paths
 data_dir = '../data/synth1'
 intensity_map = np.load('../output/intensity_map.npy')
 event_file = os.path.join(data_dir, 'events.txt')
@@ -43,26 +37,26 @@ factor = 4 / 300 * num_events_batch
 contrast_threshold = 0.45
 sigma_likelihood = 0.17
 minimum_constant = 1e-3
-
 sigma_1 = factor * 0.0004# sigma1 for motion update
 sigma_2 = factor * 0.0004# sigma2 for motion update
 sigma_3 = factor * -0.0005287901912270614 # sigma3 for motion update
 total_nr_events_considered = int(3564657/360*degrees_rot)  #TODO: Only works if not dividable by events by batch
 first_matrix = helpers.get_first_matrix(filename_poses)
-
 all_rotations_test = []
-
-
 # tau=7000
 # tau_c=2000                                      #time between events in same pixel
 # contrast_threshold = 0.22
-
 sensor_height = 128
 sensor_width = 128
 image_height = 1024
 image_width = 2*image_height
 randomseed = None
 
+#####################################################
+#
+# Class for the Tracker
+#
+#####################################################
 
 class Tracker():
     def __init__(self):
@@ -72,22 +66,13 @@ class Tracker():
 
 
 
-
-
     def camera_intrinsics(self):
         """
         Define camera intrinsic matrix and return
         :return: Camera intrinsic Matrix K
         """
 
-        # f_x = 115.534  # x-focal length
-        # s = 0  # Skewness
-        # x_0 = 79.262
-        # f_y = 115.565  # y-focal length
-        # y_0 = 65.531
-        # K = np.array([[f_x, s, x_0], [0, f_y, y_0], [0, 0, 1]])
-
-        #from Guillermo:
+        #data set specific parameters:
         K = np.array([[91.4014729896821, 0.0, 64.0],
                       [0.0, 91.4014729896821, 64.0],
                       [0, 0, 1]])
@@ -100,12 +85,15 @@ class Tracker():
         Initialize all particles based on various parameters
         :param N: # particles num_particles
         :param init_rotmat: Rotation Matrix of initial pose
-        :param bound1:
-        :param bound2:
-        :param bound3:
-        :param seed:
+        :param bound1: lower and upper bound for uniform distribution in direction of G1
+        :param bound2: lower and upper bound for uniform distribution in direction of G2
+        :param bound3: lower and upper bound for uniform distribution in direction of G3
+        :param seed: random seed
         :return: DataFrame with ['Rotation', 'Weight', 'theta', 'phi', 'v', 'u', 'pol', 'r_w1', 'r_w2', 'r_w3', 'z', 'pol']
         """
+
+        # initialize data frame for particles
+
         df = pd.DataFrame(columns=
                           ['Rotation', 'Weight', 'theta',
                            'phi', 'v', 'u', 'pol',
@@ -114,10 +102,16 @@ class Tracker():
                            'logintensity_t']
                           )
         df['Rotation'] = df['Rotation'].astype(object)
+
+        #initialize weights
         w0 = 1/N
+
+        # generators of SO3 group
         G1 = np.array([[0, 0, 0], [0, 0, -1], [0, 1, 0]])
         G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])
         G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])
+
+        #initialize particle Rotations within the respective bounds
 
         for i in range(N):
             n1 = np.random.uniform(-bound1, bound1)
@@ -173,17 +167,15 @@ class Tracker():
         :param calibration_inv: inverted camera calibration
         :return: DataFrame with particles as rows and angles as columns.
         """
-        # print("Event")
-        # print('x: ', event['x'])
-        # print('y: ', event['y'])
 
+        # from camera frame (u,v) to world reference frame
         k_inv_times_event = np.dot(calibration_inv,
                                    np.array([[event['x']], [event['y']], [1]])
-                                   )  # from camera frame (u,v) to world reference frame
-        # print(k_inv_times_event)
-        # print(k_inv_times_event)
+                                   )
+
 
         coordinates = ['p_w1', 'p_w2', 'p_w3']
+
 
         particles[coordinates] = pd.DataFrame.from_records(particles['Rotation'].apply(lambda x: np.dot(np.dot(first_matrix.T, x), k_inv_times_event)))
 
@@ -191,14 +183,10 @@ class Tracker():
         particles['p_w2'] = particles['p_w2'].str.get(0)
         particles['p_w3'] = particles['p_w3'].str.get(0)
 
-        # print(particles['p_w1'].loc[0])
-        # print(particles['p_w2'].loc[0])
-        # print(particles['p_w3'].loc[0])
 
-        # from world reference frame to rotational frame (theta, phi)
+        # from world reference frame to rotational frame (theta, phi) so we can plot it on a 2D map
 
         particles['theta'] = np.arctan2(particles['p_w1'], particles['p_w3'])
-        # print(particles['theta'][0])
         particles['phi'] = np.arctan2(particles['p_w2'], np.sqrt(np.power(particles['p_w1'], 2) + np.power(particles['p_w3'], 2)))
 
         return particles
@@ -212,6 +200,8 @@ class Tracker():
         :param calibration: camera calibration
         :return: DataFrame with particles as rows and angles as columns.
         """
+
+        #Similarly as event_and_particles_to_angles for just one particle
         k_inv_times_event = np.dot(calibration_inv, np.array([[event['x']], [event['y']], [1]])) #from camera frame (u,v) to world reference frame
         r_w1, r_w2, r_w3 = np.dot(np.dot(first_matrix.T, particle['Rotation']), k_inv_times_event)
         r_w1 = r_w1[0]
@@ -234,7 +224,6 @@ class Tracker():
         :param width: width of image in pixels
         :return: tuple with integer map points (pixel coordinates)
         """
-        # v = np.floor((-1*phi+np.pi/2)/np.pi*height)
         v = np.floor(-1*(np.pi / 2 - phi) / np.pi * height + height) # jb's version
         u = np.floor((theta + np.pi)/(2*np.pi)*width)
         return v, u
@@ -242,7 +231,7 @@ class Tracker():
 
     def angles2map_df(self, particles, height=1024, width=2048):
         """
-        USED FOR COLLECTION OF PARTICLES
+        USED FOR COLLECTION OF PARTICLES, same principle as angles2map
         For DataFrame particles, converts angles (theta in [-pi, pi], phi in [-pi/2, pi/2])
         to integer map points (pixel coordinates)
         :param particles: DataFrame
@@ -260,8 +249,7 @@ class Tracker():
         For each event, gets map angles and coordinates (for on panoramic image)
         :param event: one event
         :param particles: dataframe with particles
-        :param calibration:
-        :return:  DataFrame with particles as rows and as columns theta, phi, v, u (coordinates)
+        :param calibration: calibration matrix
         """
         self.event_and_particles_to_angles(event, particles, calibration_inv)
         self.angles2map_df(particles)
@@ -271,7 +259,6 @@ class Tracker():
 
     def oneparticle_per_event2map(self, event, particle, calibration_inv):
         """
-        TODO: Takes a bit long...
         For each event, gets map angles and coordinates (for on panoramic image)
         :param event: one event
         :param particle: dataframe with particle
@@ -293,7 +280,7 @@ class Tracker():
         :param velocity: timestep
         :return: DataFrame with updated particles
         """
-        # print(velocity)
+        # check working mechanism with fixed velocity, used for variance of motion update
         if np.isinf(velocity):
             print("is inf!")
             velocity = 1.
@@ -302,6 +289,8 @@ class Tracker():
         G2 = np.array([[0, 0, 1], [0, 0, 0], [-1, 0, 0]])  # rotation around y
         G3 = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 0]])  # rotation around z
 
+
+        # motion update for the rotation matrices
         particles['Rotation'] = particles['Rotation'].apply(lambda x: np.dot(x, sp.expm(np.random.normal(0.0, abs(velocity*sigma_1)) * G3 +
                                                                                         np.random.normal(0.0, abs(velocity*sigma_2)) * G1 +
                                                                                         np.random.normal(0.0, abs(velocity*sigma_3)) * G2)))
@@ -312,7 +301,6 @@ class Tracker():
 
     def get_latest_particles(self, t_asked, particles_all_time):
         """
-        #TODO: Only tested for first.
         From list of particles over all times
         (one per timestep/batch, already resampled),
         get set of particles that was just before asked t_asked
@@ -320,7 +308,7 @@ class Tracker():
         :param particles_all_time:
         :return: the particle that came before a time-of-interest.
         """
-        # dt_pos = 1e-4 #TODO: Write as class variable (also dt_pos_inv)
+        # dt_pos = 1e-4
         # dt_pos_inv = 1. / dt_pos
         # t_particles = math.floor(t_asked * dt_pos_inv) / dt_pos
         return particles_all_time[particles_all_time['t'] <= t_asked].iloc[-1]
@@ -329,10 +317,8 @@ class Tracker():
     def event_likelihood(self, z, event, mu=0.45, sigma=sigma_likelihood, k_e=1.0*1e-3):
         """
         For a given absolute log intensity difference z,
-        returns the likelihood of an event.
+        returns the likelihood of an event following a Gaussian curve with the indicated mu and sigma.
         likelihood = gaussian distribution + noise
-        TODO: What about negative values? -> Done. test!!
-        TODO: If z negative but event positive, cancel! -> Done, test!!
         :param z: log intensity difference
         :param mu: mean
         :param sigma: standard deviation
@@ -363,27 +349,36 @@ class Tracker():
         :param events_batch: events of a batch
         :param particles: particles
         :param all_rotations: DataFrame containing one time and one rotation per batch.
-        :param sensortensor:
-        :param calibration_inv:
+        :param sensortensor: sensortensor
+        :param calibration_inv: inverted calibration matrix
         :return: particles
         """
         particles['Weight'] = np.empty((len(particles), 0)).tolist()
 
         for idx, event in events_batch.iterrows():
+
+            # for each event, update the sensor tensor
             self.update_sensortensor(sensortensor, event)
+            #for each event, convert rotation matrix to pixels on the map
             self.particles_per_event2map(event, particles, calibration_inv)
+            # calculate the contrast change between the previous and current intensity on the respective pixel
             tminustc = sensortensor[1][int(event['y']), int(event['x'])][0]
+            #todo was macht das?
             particle_ttc = self.get_latest_particles(tminustc,
                                                 particles_all_time=all_rotations)  # single rotationmatrix before ttc
             self.oneparticle_per_event2map(event,
                                       particle_ttc,
                                       calibration_inv)
-
+            # find the intensity of the pixel at t-t_c
             particles['logintensity_ttc'] = intensity_map[int(particle_ttc['v']-1),
                                                           int(particle_ttc['u']-1)]
+            # find the intensity of the pixel at t
             particles['logintensity_t'] = particles.apply(lambda row: intensity_map[int(row.v-1), int(row.u-1)], axis=1)
+            # calculate log intensity change
             particles['z'] = particles['logintensity_t'] - particles['logintensity_ttc']
+            # get likelihood for respective intensity changes
             particles['Weight'] = particles.apply(lambda x: x.Weight + [self.event_likelihood(x.z, event)], axis=1)
+        # update weights
         particles['Weight'] = particles['Weight'].apply(lambda x: np.mean(x)) #Tested
 
         return
@@ -406,40 +401,32 @@ class Tracker():
         :return: resampled particles, weighted average
         '''
 
-        # sum_of_weights=particles['Weight'].cumsum(axis=0)
+        # initialize empty df
 
         resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
 
+        # choose with replacement of the particles weighted according to weights after measurement update
         resampled_particles['Rotation'] = particles['Rotation'].sample(n=len(particles), replace=True,
                                                                   weights=particles['Weight'], random_state=1)
+        # reset weights
         resampled_particles['Weight'] = float(1 / len(particles))
+        # reset index
         resampled_particles = resampled_particles.reset_index(drop=True)
-
-        # for i in range(len(particles)):     # i: resampling for each particle
-        #     r = np.random.uniform(0, 1)
-        #     for n in range(len(particles)):
-        #         if sum_of_weights[n] >= r and n==0:
-        #             n_tilde=n
-        #             break
-        #         if sum_of_weights[n] >= r and r > sum_of_weights[n - 1]:
-        #             n_tilde=n
-        #             break
-        #
-        #     resampled_particles.at[i, ['Rotation']] = [particles.loc[n_tilde, 'Rotation']]
-        #     resampled_particles.at[i, ['Weight']] = float(1/len(particles))
-        #     resampled_particles['Weight'] = resampled_particles['Weight'].astype('float64')
 
         return resampled_particles
 
     def mean_of_resampled_particles(self, particles):
         '''
+        calculate the mean of the resampled particles per event_batch for further use
         :param particles: pandas df of resampled particles (all with the same weight)
         :return: mean of rotation matrix
         '''
         rotmats=np.zeros((len(particles), 3, 3))
         for i in range(len(particles)):
+            #take the logarithm of the matrix
             rotmats[i] = sp.logm(particles['Rotation'].as_matrix()[i])
         liemean = sum(rotmats)/len(particles)
+        # exponent of matrix
         mean = sp.expm(liemean)
 
         return mean
@@ -449,29 +436,37 @@ class Tracker():
     def run(self):
         """
         Runs the experiment, saves and plots output.
-        :return:
+        :return: data frame with all estimated poses
         """
         print("Events per batch: ", num_events_batch)
         print("Initialized particles: ", num_particles)
         calibration = self.camera_intrinsics()
         calibration_inv = np.linalg.inv(calibration)
+
+        # load events
         events, num_events = helpers.load_events(event_file, False, head=total_nr_events_considered, return_number=True)
         events = events.astype({'x': int, 'y': int})
         print(events.head(5))
         print("Events total: ", num_events)
+
+        # calculate how many batches are considered
         num_batches = int(np.floor(num_events/num_events_batch))
         print("Batches total: ", num_batches)
 
         dt_mean = events['t'].diff().mean()
+
+        # initialize particles
         particles = self.init_particles(num_particles, first_matrix,
                                    sigma_init1, sigma_init2, sigma_init3,
                                    seed=None)
-
+        # initialize sensor tensor
         sensortensor = self.initialize_sensortensor(128, 128)
 
         batch_nr = 0
         event_nr = 0
         t_batch = 0
+
+        # initialize data frame where rotations will be stored
         all_rotations = pd.DataFrame(columns=['t', 'Rotation'])
         all_rotations.loc[batch_nr] = {'t': t_batch,
                                        'Rotation': first_matrix}
@@ -482,21 +477,31 @@ class Tracker():
         mean_of_rotations = pd.DataFrame(columns=['Rotation'])
         mean_of_rotations['Rotation'].astype(object)
 
+        # append first matrix to file with poses
         all_rotations_test.append(first_matrix)
         starttime = time.time()
+
+
         while batch_nr < num_batches:
+
+
             events_batch = events[event_nr:event_nr + num_events_batch]
             dt_batch = (events_batch['t'].max() - events_batch['t'].min())/num_events_batch
+            # calculate velocity in order to adapt motion update
             velocity = dt_mean / dt_batch
 
+            # motion update for particles
             particles = self.motion_update(particles, velocity=velocity)
 
+            # measurement update for particles
             self.measurement_update(events_batch,
                                particles, all_rotations,
                                sensortensor,
                                calibration_inv
                                )
             self.normalize_particle_weights(particles)
+
+            # resampling particles
             particles = self.resampling(particles)
 
             event_nr += num_events_batch
@@ -505,9 +510,6 @@ class Tracker():
 
             new_rotation = self.mean_of_resampled_particles(particles)
             all_rotations_test.append(new_rotation)
-
-
-            # visualize_particles(particles['Rotation'],  mean_value=new_rotation)
 
             all_rotations.loc[batch_nr] = {'t': t_batch,
                                            'Rotation': new_rotation}
@@ -520,10 +522,12 @@ class Tracker():
 
         print(batch_nr)
         print(event_nr)
+
+        # convert rotation matrices to quaternions
         quaternions = helpers.rot2quaternions(all_rotations)
         datestring = helpers.quaternions2file(quaternions, directory='../output/poses/')
 
-        #Include all wished
+        # write quaternions to file, additional log file
         time_passed = round(time.time() - starttime)
         helpers.write_logfile(datestring, directory= '../output/poses/',
                               experiment='Finding optimal parameters',
@@ -550,47 +554,9 @@ class Tracker():
 
 
 if __name__ == '__main__':
+
+    # call class Tracker
     tracker = Tracker()
+    # run
     tracker.run()
-    # plot_unitsphere()
-    # plot_unitsphere_matplot()
 
-
-#########TESTING
-
-    # print("Events per batch: ", num_events_batch)
-    # print("Initialized particles: ", num_particles)
-    # calibration = camera_intrinsics()
-    # events, num_events = helpers.load_events(event_file, head=1, return_number=True)
-    # events = events.astype({'x': int, 'y': int})
-    # print(events.head()['x'])
-    # print("Events total: ", num_events)
-    # num_batches = int(np.floor(num_events/num_events_batch))
-    # print("Batches total: ", num_batches)
-    # particles = init_particles(num_particles)
-    # sensortensor = initialize_sensortensor(128, 128)
-    # # print(particles)
-    #
-    # batch_nr = 0
-    # event_nr = 0
-    # t_batch = 0
-    # all_rotations = pd.DataFrame(columns=['t', 'Rotation'])
-    # unit_matrix = np.array([[1,0,0], [0,1,0], [0,0,1]])
-    # all_rotations.loc[batch_nr] = {'t': t_batch,
-    #                                'Rotation': unit_matrix}
-    #
-    #
-    # particles = init_particles(num_particles)
-    # particles = measurement_update(events, particles, all_rotations, sensortensor, calibration)
-    #
-    # particles = normalize_particle_weights(particles)
-    # particles = resampling(particles)
-    #
-    # resampled_particles = pd.DataFrame(columns=['Rotation', 'Weight'])
-    # resampled_particles['Rotation'] = particles['Rotation'].sample(n=num_particles, replace=True,
-    #                                          weights=particles['Weight'], random_state=1)
-    #
-    # resampled_particles['Weight'] = float(1/num_particles)
-    # resampled_particles['Weight'] = resampled_particles['Weight'].astype(object)
-    # resampled_particles = resampled_particles.reset_index(drop=True)
-    # print(resampled_particles)

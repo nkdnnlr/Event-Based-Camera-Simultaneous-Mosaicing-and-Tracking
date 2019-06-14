@@ -3,8 +3,8 @@
 # Given DVS events and camera poses (rotational motion), reconstruct the
 # gradient map that caused the events.
 #
-# Céline Nauer, Institute of Neuroinformatics, University of Zurich
-# Joël Bachmann, ETH
+# Celine Nauer, Institute of Neuroinformatics, University of Zurich
+# Joel Bachmann, ETH
 # Nik Dennler, Institute of Neuroinformatics, University of Zurich
 #
 # Original MATLAB code by
@@ -22,6 +22,8 @@ import pandas as pd
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
+import pyquaternion
+import pylab
 
 # Provide function handles to convert from rotation matrix to axis-angle and vice-versa
 import sample.helpers.integration_methods as integration_methods
