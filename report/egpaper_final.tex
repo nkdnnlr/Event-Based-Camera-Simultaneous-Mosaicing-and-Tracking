@@ -63,7 +63,8 @@ Event cameras employ biologically inspired vision sensors which record pixel-lev
 This working principle leads to advantages such as a very high dynamic range, low latency and no motion blur. 
 However, standard computer vision algorithms can not be applied to an event-stream and thus, novel algorithms are needed. In this project, we re-implement the mapping and tracking algorithm proposed by Kim et al. 
 The algorithm consists of two parts: a Particle Filtering method for tracking and an Extended Kalman Filter for the intensity map reconstruction. We examine the parts separately on a simulated, noise-free dataset for baseline investigation.
-Further, we provide a self-recorded DAVIS dataset and attempt to improve the ground truth poses using ORB-SLAM on image frames. Inspecting the performance of the algorithm on the simulated dataset shows acceptable results, while the recorded dataset was not processed successfully. We conclude that the method is not optimal and would have to be adapted further in order to cope with real data sets.
+Further, we provide a self-recorded DAVIS dataset and attempt to improve the ground truth poses using ORB-SLAM on the image frames. Inspecting the performance of the algorithm on the simulated dataset shows acceptable results, while the recorded dataset was not processed successfully. 
+We conclude that the method is not optimal and would have to be adapted further in order to cope with real data sets.
 \end{abstract}
 
 
@@ -72,17 +73,19 @@ Further, we provide a self-recorded DAVIS dataset and attempt to improve the gro
 %%%%%%%%% BODY TEXT
 \section{Introduction and Problem Statement}
 
-The nature of a dynamic vision sensor lead to favourable performance such as short latency and a high dynamic range. This gives them a large potential for applications in computer vision, robotics and autonomous mobility. Event-based methods are especially promising in settings where traditional cameras fail due to their limitations, for instance high-speed scenarios. By appropriately exploiting the output of these sensors through novel algorithms, a range of unsolved problems in vision could potentially be tackled. 
-
+The nature of a dynamic vision sensor leads to favourable performance such as short latency and a high dynamic range. This gives them a large potential for applications in computer vision, robotics and autonomous mobility. Event-based methods are especially promising in settings where traditional cameras fail, for instance high-speed or low-light scenarios. By appropriately exploiting the output of these sensors through novel algorithms, a range of unsolved problems in vision could potentially be tackled. 
 %-------------------------------------------------------------------------
 
 \subsection{Dynamic Vision Sensor}
 
 \paragraph{Working principle:}
-Traditional cameras capture images in frames, such that all pixels are evaluated synchronously at a fixed rate. Event cameras are bio-inspired sensors that work radically different. Each pixel measures the brightness change independently from the others and generate a so-called event, once a brightness threshold is crossed. An event $e$ is the encoding of time $t$, pixel coordinates $(u,v)$ and polarity $p$ of the brightness changes.
+Traditional cameras capture images in frames, such that all pixels are evaluated synchronously at a fixed rate. Event cameras are bio-inspired sensors that work radically different. 
+Each pixel measures the brightness change independently from the others and generates a so-called event, once a brightness threshold is crossed. An event $e$ is the encoding of pixel coordinates $(u,v)$, polarity $p$ and time $t$ of the brightness changes.
+
 \begin{equation}
 e(u,v) = (u,v,p,t)
 \end{equation}
+
 For each pixel, an event is triggered if the difference of the log intensities is smaller or larger than a camera-specific threshold value $C_{th}$:
 \begin{equation}
     \Delta \ln{I} \coloneqq \ln{(t)} - \ln{(t-\Delta t) \gtrless
@@ -157,7 +160,7 @@ As each event contains a polarity ($\pm 1$), we can - for each pair of events in
 
 \begin{figure}[h!]
    \centering
-    \includegraphics[width=0.6\linewidth]{figures/mexican.pdf}
+    \includegraphics[width=0.6\linewidth]{figures/mexican.png}
     \label{fig:mexican}
     \caption{Mexican-hat likelihood function. The weight of each particle is determined by applying the function to the difference in log intensity for two succeeding events at the same pixel. The center and the spread of the curve is specific to the sensor model of the camera.\cite{kim2014simultaneous}}
 \end{figure}
