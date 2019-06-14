@@ -1,25 +1,23 @@
 import sys
 sys.path.append("..")
 import time
-import sys
 import math
 import os
 import numpy as np
 import pandas as pd
 import scipy.linalg as sp
 import math
-import sys
 from mpl_toolkits.mplot3d import Axes3D
 from sys import platform as sys_pf
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
-import sample.helpers as helpers
+import sample.helpers.helpers as helpers
 
 
 # Folder paths
-data_dir = '../data/synth1'
-intensity_map = np.load('../output/intensity_map.npy')
+data_dir = '../../data/synth1'
+intensity_map = np.load('../../output/intensity_map.npy')
 event_file = os.path.join(data_dir, 'events.txt')
 filename_poses = os.path.join(data_dir, 'poses.txt')
 outputdir_poses = '../output/poses/'

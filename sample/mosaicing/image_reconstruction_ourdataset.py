@@ -28,7 +28,7 @@ import pylab
 # Provide function handles to convert from rotation matrix to axis-angle and vice-versa
 import sample.helpers.integration_methods as integration_methods
 import sample.helpers.coordinate_transforms as coordinate_transforms
-import sample.helpers as helpers
+import sample.helpers.helpers as helpers
 
 
 ## Run settings:

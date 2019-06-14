@@ -50,7 +50,7 @@ time_0 = time.time()
 # Data directories
 data_dir = '../data/synth1'
 calibration_dir = '../data/calibration'
-output_dir = '../output'
+output_dir = '../../output'
 images_dir = os.path.join(output_dir, '{0}pbatch_{1}'.format(num_events_batch, measurement_criterion))
 print(images_dir)
 if not os.path.exists(images_dir):
@@ -107,7 +107,6 @@ print("Loading Camera Orientations")
 filename_events = os.path.join(data_dir, 'poses.txt')
 poses = pd.read_csv(filename_events, delimiter=' ', header=None, names=['sec', 'nsec', 'x', 'y', 'z', 'qx', 'qy', 'qz', 'qw'])
 print(poses.head())
-exit()
 num_poses = poses.size
 print("Number of poses in file: ", num_poses)
 

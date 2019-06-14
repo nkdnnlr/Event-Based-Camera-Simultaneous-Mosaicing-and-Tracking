@@ -7,8 +7,8 @@ import numpy as np
 import sample.helpers.integration_methods as integration_methods
 
 
-
-images_dir = '../output/ourdataset/test'
+## Import image data
+images_dir = '../../output/ourdataset/test'
 
 pickle_in = open("grad_map.pickle", "rb")
 grad_map = pickle.load(pickle_in)
@@ -16,28 +16,14 @@ grad_map = pickle.load(pickle_in)
 pickle_in = open("trace_map.pickle", "rb")
 trace_map = pickle.load(pickle_in)
 
-
+## Process image data
 grad_map_clip = {}
 grad_map_clip['x'] = grad_map['x']
 grad_map_clip['y'] = grad_map['y']
 mask = trace_map > 0.01  # % reconstruct only gradients with small covariance
 
-
 grad_map_clip['x'][mask] = 0
 grad_map_clip['y'][mask] = 0
-
-
-
-
-# grad_map_clip.to_csv('grad_map_clip.csv')
-#
-# grad_map_clip['x'] = grad_map_clip['x'].loc[1750:2000]
-# grad_map_clip['y'] = grad_map_clip['y'].loc[400:700]
-
-
-
-
-
 
 rec_image = integration_methods.frankotchellappa(grad_map_clip['x'], grad_map_clip['y']);
 rec_image = rec_image - np.mean(rec_image)
@@ -73,12 +59,6 @@ h_gx = plt.imshow(trace_map/np.max(trace_map), cmap=plt.cm.binary, vmin=0, vmax=
 plt.title("Trace of Covariance")
 plt.savefig(os.path.join(images_dir, "trace.pdf"), dpi=350)
 plt.show()
-
-# g_ang = -1*np.arctan2(grad_map['y'], grad_map['x'])
-# g_grad = np.sqrt(np.power(grad_map['x'], 2) + np.power(grad_map['y'], 2))
-# g_grad_unit = g_grad/1.
-# g_grad_unit[g_grad_unit > 1.0] = 1.0
-# g_ang_unit = g_ang/360. + 0.5
 
 np.save("intensity_map.npy", rec_image)
 
