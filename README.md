@@ -2,11 +2,12 @@
 
 Authors: Céline Nauer, Joël Bachmann, Nik Dennler
 
-We attempt to implement the methods proposed by Kim et. al (2014) to simultaneously map the environment and track the camera pose in SO(3). For the mapping part, we are heavily guided by the MATLAB code written by G. Gallego of RPG. For the tracking algorithm, we implemented the theoretical framework of a particle filter for event cameras proposed by Kim et. al (2014). Following, you will find an overview over the working principle: 
-
-![Process diagram tracking algorithm](process.pdf)
+We attempt to implement the methods proposed by Kim et. al (2014) to simultaneously map the environment and track the camera pose in SO(3). For the mapping part, we are heavily guided by the MATLAB code written by G. Gallego of RPG. For the tracking algorithm, we implemented the theoretical framework of a particle filter for event cameras proposed by Kim et. al (2014). 
 
 This project is a part of the lecture 3D Vision by M. Pollefeys at ETHZ. 
+
+![Presentation Poster](poster/poster.png)
+
 
 References: 
  1. H. Kim, A. Handa, R. Benosman, S.-H. Ieng, A.J. Davison, 
